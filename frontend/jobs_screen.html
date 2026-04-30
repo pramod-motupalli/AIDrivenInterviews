@@ -117,25 +117,29 @@
 </div>
 </div>
 <nav class="flex-1 space-y-1">
-<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors font-medium text-sm" href="#">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors font-medium text-sm" href="/dashboard/">
 <span class="material-symbols-outlined text-[20px]">dashboard</span>
                 Dashboard
             </a>
-<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-blue-50 text-blue-700 transition-colors font-semibold text-sm" href="#">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-blue-50 text-blue-700 transition-colors font-semibold text-sm" href="/jobs/">
 <span class="material-symbols-outlined text-[20px]">work</span>
                 Jobs &amp; Candidates
             </a>
-<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors font-medium text-sm" href="#">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors font-medium text-sm" href="/reports/">
 <span class="material-symbols-outlined text-[20px]">assessment</span>
                 Reports
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors font-medium text-sm" href="/logout/">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+                Logout
             </a>
 </nav>
 <div class="mt-auto pt-4 border-t border-slate-100">
 <div class="flex items-center gap-3 px-2">
 <img alt="Recruiter Profile" class="w-9 h-9 rounded-full object-cover" data-alt="Professional headshot of a recruitment manager in a clean office setting, soft corporate lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAO7tZdKl9U3CGi1fo8g0CjfkYVgcjBL1Z0aUp_m1iEPy9feqdnvXmqxJ1NLlWV7YVKEvxoqUvqHM0iLXLymBjmjKRyILO1GyhKwsxLzVp_jcYx0a59awTrbo4ZPqWDfdS8NS6AvCZqmucdZocBrd6MBLC9d1Ov7PkGraP3n0PICfy-XU1an-u9kcrv4EHdAQSISt-_2Q_0K-Yraqx34GOi8MAIy32glK3fiLYWTGPYnbGDphS94V7ufCM1zHYNqqGX7JcONhLRshg"/>
 <div class="flex-1 min-w-0">
-<p class="text-sm font-semibold text-slate-900 truncate">Alex Rivera</p>
-<p class="text-xs text-slate-500 truncate">Senior Recruiter</p>
+<p class="text-sm font-semibold text-slate-900 truncate">{{ request.user.full_name|default:request.user.email }}</p>
+<p class="text-xs text-slate-500 truncate">{{ request.user.position|default:"Recruiter" }}</p>
 </div>
 <span class="material-symbols-outlined text-slate-400">settings</span>
 </div>
@@ -145,6 +149,13 @@
 <header class="fixed top-0 right-0 left-[260px] h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 z-40 flex items-center justify-between px-8">
 <div>
 <h2 class="font-headline-md text-slate-900">Processing Workspace</h2>
+{% if messages %}
+<div class="mt-2 space-y-1">
+    {% for message in messages %}
+    <p class="text-xs {% if message.tags == 'error' %}text-red-600{% else %}text-green-600{% endif %} font-medium">{{ message }}</p>
+    {% endfor %}
+</div>
+{% endif %}
 </div>
 <div class="flex items-center gap-4">
 <button class="p-2 text-slate-500 hover:bg-slate-50 rounded-full transition-colors">
@@ -158,27 +169,89 @@
 <!-- Main Content Canvas -->
 <main class="ml-[260px] pt-16 min-h-screen">
 <div class="max-w-[1200px] mx-auto p-8 space-y-8">
-<!-- Upload Section: Side-by-Side -->
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-<!-- Job Description Upload -->
-<div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col items-center justify-center border-dashed border-2 bg-slate-50/30 group hover:border-primary/40 transition-colors cursor-pointer">
-<div class="w-12 h-12 bg-white rounded-full flex items-center justify-center border border-slate-200 shadow-sm mb-4 group-hover:text-primary transition-colors">
-<span class="material-symbols-outlined">description</span>
-</div>
-<h3 class="font-semibold text-slate-900 mb-1">Upload Job Description</h3>
-<p class="text-body-sm text-slate-500 text-center mb-4">PDF, DOCX, or text content</p>
-<button class="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">Choose File</button>
-</div>
-<!-- Candidate Resume Upload -->
-<div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col items-center justify-center border-dashed border-2 bg-slate-50/30 group hover:border-primary/40 transition-colors cursor-pointer">
-<div class="w-12 h-12 bg-white rounded-full flex items-center justify-center border border-slate-200 shadow-sm mb-4 group-hover:text-primary transition-colors">
-<span class="material-symbols-outlined">upload_file</span>
-</div>
-<h3 class="font-semibold text-slate-900 mb-1">Upload Candidate Resume</h3>
-<p class="text-body-sm text-slate-500 text-center mb-4">PDF or DOCX supported</p>
-<button class="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">Choose File</button>
-</div>
-</div>
+<form method="POST" enctype="multipart/form-data" class="space-y-8">
+    {% csrf_token %}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Job Description Upload -->
+        <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col items-center justify-center border-dashed border-2 bg-slate-50/30 group hover:border-primary/40 transition-colors relative min-h-[220px]">
+            <!-- JD Toggle -->
+            <div class="absolute top-3 right-3 flex gap-1 p-1 bg-white border border-slate-200 rounded-lg">
+                <button type="button" onclick="toggleJDMode('file')" id="jd-file-btn" class="px-2 py-1 text-[10px] font-bold uppercase rounded bg-primary text-white transition-all">File</button>
+                <button type="button" onclick="toggleJDMode('text')" id="jd-text-btn" class="px-2 py-1 text-[10px] font-bold uppercase rounded text-slate-500 hover:bg-slate-50 transition-all">Text</button>
+            </div>
+
+            <!-- File Upload UI -->
+            <div id="jd-file-container" class="flex flex-col items-center" onclick="document.getElementById('jd_file').click()">
+                <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center border border-slate-200 shadow-sm mb-4 group-hover:text-primary transition-colors">
+                    <span class="material-symbols-outlined">description</span>
+                </div>
+                <h3 class="font-semibold text-slate-900 mb-1">Upload Job Description</h3>
+                <p class="text-body-sm text-slate-500 text-center mb-4">PDF, DOCX, or text content</p>
+                <input type="file" name="jd_file" id="jd_file" class="hidden" onchange="updateFileName(this, 'jd_name')">
+                <div id="jd_name" class="text-xs text-primary font-medium mb-2"></div>
+                <button type="button" class="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">Choose File</button>
+            </div>
+
+            <!-- Text Paste UI -->
+            <div id="jd-text-container" class="hidden w-full flex flex-col gap-2">
+                <label class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Paste Job Description</label>
+                <textarea name="jd_text" id="jd_text" rows="4" class="w-full p-3 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-none" placeholder="Paste JD content here..."></textarea>
+            </div>
+        </div>
+
+        <!-- Candidate Resume Upload -->
+        <div onclick="document.getElementById('resume_file').click()" class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col items-center justify-center border-dashed border-2 bg-slate-50/30 group hover:border-primary/40 transition-colors cursor-pointer">
+            <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center border border-slate-200 shadow-sm mb-4 group-hover:text-primary transition-colors">
+                <span class="material-symbols-outlined">upload_file</span>
+            </div>
+            <h3 class="font-semibold text-slate-900 mb-1">Upload Candidate Resume</h3>
+            <p class="text-body-sm text-slate-500 text-center mb-4">PDF or DOCX supported</p>
+            <input type="file" name="resume_file" id="resume_file" class="hidden" onchange="updateFileName(this, 'resume_name')">
+            <div id="resume_name" class="text-xs text-primary font-medium mb-2"></div>
+            <button type="button" class="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">Choose File</button>
+        </div>
+    </div>
+    
+    <div class="flex justify-end">
+        <button type="submit" class="px-8 py-3 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-95">
+            Process Application
+        </button>
+    </div>
+</form>
+
+<script>
+function updateFileName(input, targetId) {
+    const fileName = input.files[0] ? input.files[0].name : '';
+    document.getElementById(targetId).textContent = fileName;
+}
+
+function toggleJDMode(mode) {
+    const fileContainer = document.getElementById('jd-file-container');
+    const textContainer = document.getElementById('jd-text-container');
+    const fileBtn = document.getElementById('jd-file-btn');
+    const textBtn = document.getElementById('jd-text-btn');
+
+    if (mode === 'file') {
+        fileContainer.classList.remove('hidden');
+        textContainer.classList.add('hidden');
+        fileBtn.classList.add('bg-primary', 'text-white');
+        fileBtn.classList.remove('text-slate-500');
+        textBtn.classList.remove('bg-primary', 'text-white');
+        textBtn.classList.add('text-slate-500');
+        document.getElementById('jd_text').value = '';
+    } else {
+        fileContainer.classList.add('hidden');
+        textContainer.classList.remove('hidden');
+        textBtn.classList.add('bg-primary', 'text-white');
+        textBtn.classList.remove('text-slate-500');
+        fileBtn.classList.remove('bg-primary', 'text-white');
+        fileBtn.classList.add('text-slate-500');
+        document.getElementById('jd_file').value = '';
+        document.getElementById('jd_name').textContent = '';
+    }
+}
+</script>
+
 <!-- Job Details Section -->
 <section>
 <div class="flex items-center justify-between mb-4">
@@ -297,9 +370,9 @@
 </ul>
 </div>
 <div class="flex flex-col justify-center gap-3">
-<button class="w-full py-2.5 bg-primary text-white rounded-lg font-semibold text-sm shadow-sm hover:bg-primary-container transition-colors">
+<a href="/report/1/" class="w-full py-2.5 bg-primary text-white rounded-lg font-semibold text-sm shadow-sm hover:bg-primary-container transition-colors text-center">
                                     View Full AI Report
-                                </button>
+                                </a>
 <button class="w-full py-2.5 bg-white border border-slate-200 text-slate-700 rounded-lg font-semibold text-sm hover:bg-slate-50 transition-colors">
                                     Schedule Interview
                                 </button>

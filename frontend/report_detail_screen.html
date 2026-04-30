@@ -111,17 +111,21 @@
 <p class="text-xs font-medium text-slate-500 uppercase tracking-widest">AI-Driven Hiring</p>
 </div>
 <nav class="flex flex-col gap-1">
-<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-50 transition-all duration-200" href="#">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-50 transition-all duration-200" href="/dashboard/">
 <span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
 <span class="font-medium text-sm">Dashboard</span>
 </a>
-<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-50 transition-all duration-200" href="#">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-50 transition-all duration-200" href="/jobs/">
 <span class="material-symbols-outlined" data-icon="work">work</span>
 <span class="font-medium text-sm">Jobs &amp; Candidates</span>
 </a>
-<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-blue-600 bg-blue-50/50 border-r-2 border-blue-600 transition-all duration-200" href="#">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-blue-600 bg-blue-50/50 border-r-2 border-blue-600 transition-all duration-200" href="/reports/">
 <span class="material-symbols-outlined" data-icon="analytics">analytics</span>
 <span class="font-medium text-sm">Reports</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 transition-all duration-200" href="/logout/">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="font-medium text-sm">Logout</span>
 </a>
 </nav>
 </aside>
@@ -141,8 +145,11 @@
 <button class="p-2 text-slate-500 hover:bg-slate-50 rounded-full transition-colors">
 <span class="material-symbols-outlined" data-icon="notifications">notifications</span>
 </button>
+<div class="flex items-center gap-3">
+<span class="hidden md:block text-sm font-medium text-slate-700">{{ request.user.full_name|default:request.user.email }}</span>
 <div class="h-8 w-8 rounded-full bg-primary-container overflow-hidden ring-2 ring-white">
 <img alt="Recruiter profile avatar" data-alt="professional corporate portrait of a recruiter with a friendly smile, soft natural lighting, blurred office background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCfSbvBXeBEg1o_ftT5SYqtVqGBsz_OeE5zmgsQTMU5_bN1GmhcFHo3SaWCq-p5x8w8avAyL4-cc-WQvKbDYenmiD6kr_-ZIDHfftToS5wu3o0gem1jO3kgNYfMjZ6DOzerZwKLogVHznl30MVFQTdC_oUl43TDUV-SlxalWPXBqn8E-Or58jN7arNIFMyAb662tTaYMnHlXqmgxZTz0fisPamJX7jhXZuo6xCjDKI-LUaU38i9WhcfDy9Nao3-eLaddNR5GGgPB_Q"/>
+</div>
 </div>
 </div>
 </header>
@@ -314,15 +321,15 @@
 </main>
 <!-- Bottom Navigation (Mobile Only) -->
 <nav class="lg:hidden fixed bottom-0 left-0 w-full h-16 z-50 flex justify-around items-center px-4 bg-white border-t border-slate-200 rounded-t-xl shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
-<a class="flex flex-col items-center justify-center text-slate-500 transition-transform active:scale-95" href="#">
+<a class="flex flex-col items-center justify-center text-slate-500 transition-transform active:scale-95" href="/dashboard/">
 <span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
 <span class="font-['Inter'] text-[10px] uppercase tracking-wider">Dashboard</span>
 </a>
-<a class="flex flex-col items-center justify-center text-slate-500 transition-transform active:scale-95" href="#">
+<a class="flex flex-col items-center justify-center text-slate-500 transition-transform active:scale-95" href="/jobs/">
 <span class="material-symbols-outlined" data-icon="work">work</span>
 <span class="font-['Inter'] text-[10px] uppercase tracking-wider">Jobs</span>
 </a>
-<a class="flex flex-col items-center justify-center text-blue-600 bg-blue-50 rounded-xl px-4 py-1 transition-transform active:scale-95" href="#">
+<a class="flex flex-col items-center justify-center text-blue-600 bg-blue-50 rounded-xl px-4 py-1 transition-transform active:scale-95" href="/reports/">
 <span class="material-symbols-outlined" data-icon="analytics" style="font-variation-settings: 'FILL' 1;">analytics</span>
 <span class="font-['Inter'] text-[10px] uppercase tracking-wider">Reports</span>
 </a>
