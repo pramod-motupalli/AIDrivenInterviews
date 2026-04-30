@@ -28,8 +28,8 @@ export default function Reports() {
 
       {/* Content Area */}
       <Card className="bg-white border-slate-200 rounded-xl shadow-sm overflow-hidden p-0">
-        <div className="hidden md:block">
-          <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[640px]">
             <thead>
               <tr className="bg-[#F7F9FC] border-b border-slate-200">
                 <th className="px-6 py-4 text-xs font-semibold uppercase text-slate-500">Candidate</th>

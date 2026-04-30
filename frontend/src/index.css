@@ -9,14 +9,23 @@
 @custom-variant dark (&:is(.dark *));
 
 @layer base {
+  html, body {
+    @apply h-full w-full;
+  }
   body {
-    @apply antialiased bg-background text-foreground;
+    @apply antialiased bg-background text-foreground overflow-x-hidden;
+  }
+  #root {
+    @apply h-full w-full;
   }
   * {
     @apply border-border outline-ring/50;
   }
   html {
     @apply font-sans;
+  }
+  img, video, svg {
+    @apply max-w-full;
   }
 }
 

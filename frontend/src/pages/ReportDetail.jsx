@@ -31,7 +31,7 @@ export default function ReportDetail() {
       </div>
 
       {/* Bento Grid Report */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 min-w-0">
         {/* AI Recommendation Summary (High Importance) */}
         <Card className="md:col-span-8 bg-white p-6 rounded-xl border-outline-variant shadow-sm border">
           <div className="flex items-center justify-between mb-4">
@@ -131,7 +131,7 @@ export default function ReportDetail() {
         </Card>
 
         {/* Expandable Transcript */}
-        <Card className="md:col-span-12 bg-white rounded-xl border-outline-variant shadow-sm overflow-hidden p-0 border">
+        <Card className="md:col-span-12 bg-white rounded-xl border-outline-variant shadow-sm overflow-hidden p-0 border min-w-0">
           <button className="w-full flex items-center justify-between p-6 hover:bg-slate-50 transition-colors">
             <div className="flex items-center gap-3">
               <span className="material-symbols-outlined text-slate-500">description</span>

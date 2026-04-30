@@ -11,7 +11,7 @@ export default function Sidebar() {
 
   return (
     <>
-      <aside className="hidden lg:flex flex-col gap-2 p-6 bg-white fixed left-0 top-0 h-screen w-[260px] border-r border-outline-variant z-30">
+      <aside className="hidden lg:flex flex-col gap-2 p-6 bg-white h-screen w-64 flex-shrink-0 border-r border-outline-variant z-30">
         <div className="mb-10 py-3">
           <div className="flex items-start">
             <div className="w-1 h-12 bg-[#7B61FF] rounded-full mr-3"></div>

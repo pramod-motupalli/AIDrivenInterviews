@@ -5,13 +5,13 @@ import Sidebar from './Sidebar';
 
 export default function Layout() {
   return (
-    <div className="bg-background text-on-background min-h-screen">
-      <Header />
-      <div className="flex">
-        <Sidebar />
+    <div className="bg-background text-on-background h-full w-full flex overflow-hidden">
+      <Sidebar />
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        <Header />
         {/* Main Content Canvas */}
-        <main className="flex-1 lg:ml-[260px] p-6 md:p-10 pb-24 md:pb-10 bg-surface">
-          <div className="max-w-[1200px] mx-auto">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-6 md:p-10 pb-24 md:pb-10 bg-surface">
+          <div className="max-w-7xl mx-auto w-full">
             <Outlet />
           </div>
         </main>

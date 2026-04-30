@@ -15,7 +15,7 @@ export default function Login() {
   return (
     <div className="font-body-base text-on-background min-h-screen flex flex-col items-center justify-center p-6 md:p-gutter relative overflow-hidden">
       {/* Login Container */}
-      <main className="w-full max-w-[440px] flex flex-col justify-center relative z-10">
+      <main className="w-full max-w-md flex flex-col justify-center relative z-10">
         {/* Card Shell */}
         <Card className="bg-surface-container-lowest rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.03)] border-outline-variant/30 flex flex-col overflow-hidden p-0">
           {/* Header Section */}
@@ -81,8 +81,8 @@ export default function Login() {
       
       {/* Background Decoration */}
       <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] bg-primary-fixed-dim/30 blur-[150px] rounded-full"></div>
-        <div className="absolute -bottom-[10%] -right-[10%] w-[50%] h-[50%] bg-tertiary-fixed-dim/20 blur-[150px] rounded-full"></div>
+        <div className="absolute -top-[10%] -left-[10%] w-1/2 h-1/2 bg-primary-fixed-dim/30 blur-[150px] rounded-full"></div>
+        <div className="absolute -bottom-[10%] -right-[10%] w-1/2 h-1/2 bg-tertiary-fixed-dim/20 blur-[150px] rounded-full"></div>
       </div>
     </div>
   );

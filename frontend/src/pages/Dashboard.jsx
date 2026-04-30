@@ -61,7 +61,7 @@ export default function Dashboard() {
       </div>
 
       {/* Recent Activity List */}
-      <div className="w-full">
+      <div className="w-full min-w-0">
         <Card className="bg-white border border-outline-variant rounded-xl overflow-hidden shadow-soft border-none">
           <div className="px-8 py-5 border-b border-outline-variant bg-white flex justify-between items-center">
             <h2 className="text-xl font-bold text-on-surface">Recent Activity</h2>
@@ -73,7 +73,7 @@ export default function Dashboard() {
               <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center shrink-0 border border-emerald-100">
                 <span className="material-symbols-outlined text-emerald-600 text-2xl">check_circle</span>
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div className="text-[15px] text-on-surface leading-snug">
                   <span className="font-bold">AI Interview Completed:</span> Alex Rivera scored <span className="font-bold text-emerald-600">92%</span> for the <span className="text-primary font-bold">Senior UX Designer</span> role.
                 </div>
@@ -89,7 +89,7 @@ export default function Dashboard() {
               <div className="w-12 h-12 rounded-full bg-primary-container/30 flex items-center justify-center shrink-0 border border-primary-container/20">
                 <span className="material-symbols-outlined text-primary text-2xl">person_add</span>
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div className="text-[15px] text-on-surface leading-snug">
                   <span className="font-bold">New Application:</span> Sarah Chen applied for the <span className="text-primary font-bold">Product Manager</span> position.
                 </div>
@@ -105,7 +105,7 @@ export default function Dashboard() {
               <div className="w-12 h-12 rounded-full bg-secondary-container/50 flex items-center justify-center shrink-0 border border-outline-variant">
                 <span className="material-symbols-outlined text-secondary text-2xl">campaign</span>
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div className="text-[15px] text-on-surface leading-snug">
                   <span className="font-bold">Job Posted:</span> <span className="text-primary font-bold">Technical Lead</span> is now live on 4 recruitment platforms.
                 </div>

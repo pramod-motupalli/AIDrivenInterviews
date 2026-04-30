@@ -2,7 +2,7 @@ import React from 'react';
 
 export default function Header() {
   return (
-    <header className="backdrop-blur-md flex justify-between items-center px-8 h-16 w-full sticky top-0 z-40 border-b border-outline-variant shadow-sm bg-white">
+    <header className="backdrop-blur-md flex justify-between items-center px-8 h-16 w-full border-b border-outline-variant shadow-sm bg-white flex-shrink-0 z-40">
       <div className="flex items-center gap-4">
         <span className="lg:hidden material-symbols-outlined text-on-surface-variant cursor-pointer mr-2">menu</span>
         <div className="flex items-start">
