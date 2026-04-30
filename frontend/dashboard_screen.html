@@ -183,54 +183,28 @@
 <a href="/reports/" class="text-primary text-sm font-bold hover:text-blue-700 transition-colors">View All Activities</a>
 </div>
 <div class="divide-y divide-outline-variant">
-<!-- Activity Item -->
-<a href="/report/1/" class="px-8 py-6 flex gap-5 items-center hover:bg-surface-container-low transition-colors cursor-pointer group">
-<div class="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center shrink-0 border border-emerald-100">
-<span class="material-symbols-outlined text-emerald-600 text-2xl" data-icon="check_circle">check_circle</span>
-</div>
-<div class="flex-1">
-<div class="text-[15px] text-on-surface leading-snug">
-<span class="font-bold">AI Interview Completed:</span> 
-                                        Alex Rivera scored <span class="font-bold text-emerald-600">92%</span> for the <span class="text-primary font-bold">Senior UX Designer</span> role.
-                                    </div>
-<div class="text-xs text-on-surface-variant mt-1.5 font-semibold opacity-70 flex items-center gap-1.5">
-<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'opsz' 20">schedule</span> 2 hours ago
-                                    </div>
-</div>
-<span class="material-symbols-outlined text-outline group-hover:text-primary transition-all group-hover:translate-x-1" data-icon="chevron_right">chevron_right</span>
-</a>
-<!-- Activity Item -->
-<a href="/jobs/" class="px-8 py-6 flex gap-5 items-center hover:bg-surface-container-low transition-colors cursor-pointer group">
-<div class="w-12 h-12 rounded-full bg-primary-container/30 flex items-center justify-center shrink-0 border border-primary-container/20">
-<span class="material-symbols-outlined text-primary text-2xl" data-icon="person_add">person_add</span>
-</div>
-<div class="flex-1">
-<div class="text-[15px] text-on-surface leading-snug">
-<span class="font-bold">New Application:</span> 
-                                        Sarah Chen applied for the <span class="text-primary font-bold">Product Manager</span> position.
-                                    </div>
-<div class="text-xs text-on-surface-variant mt-1.5 font-semibold opacity-70 flex items-center gap-1.5">
-<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'opsz' 20">schedule</span> 5 hours ago
-                                    </div>
-</div>
-<span class="material-symbols-outlined text-outline group-hover:text-primary transition-all group-hover:translate-x-1" data-icon="chevron_right">chevron_right</span>
-</a>
-<!-- Activity Item -->
-<a href="/jobs/" class="px-8 py-6 flex gap-5 items-center hover:bg-surface-container-low transition-colors cursor-pointer group">
-<div class="w-12 h-12 rounded-full bg-secondary-container/50 flex items-center justify-center shrink-0 border border-outline-variant">
-<span class="material-symbols-outlined text-secondary text-2xl" data-icon="campaign">campaign</span>
-</div>
-<div class="flex-1">
-<div class="text-[15px] text-on-surface leading-snug">
-<span class="font-bold">Job Posted:</span>
-<span class="text-primary font-bold">Technical Lead</span> is now live on 4 recruitment platforms.
-                                    </div>
-<div class="text-xs text-on-surface-variant mt-1.5 font-semibold opacity-70 flex items-center gap-1.5">
-<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'opsz' 20">schedule</span> Yesterday
-                                    </div>
-</div>
-<span class="material-symbols-outlined text-outline group-hover:text-primary transition-all group-hover:translate-x-1" data-icon="chevron_right">chevron_right</span>
-</a>
+                    {% for app in recent_applications %}
+                    <!-- Activity Item -->
+                    <a href="{% url 'report_detail' app.id %}" class="px-8 py-6 flex gap-5 items-center hover:bg-surface-container-low transition-colors cursor-pointer group">
+                        <div class="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center shrink-0 border border-emerald-100">
+                            <span class="material-symbols-outlined text-emerald-600 text-2xl" data-icon="check_circle">check_circle</span>
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-[15px] text-on-surface leading-snug">
+                                <span class="font-bold">Application Received:</span> 
+                                Someone applied for the <span class="text-primary font-bold">{{ app.job_title }}</span> role.
+                            </div>
+                            <div class="text-xs text-on-surface-variant mt-1.5 font-semibold opacity-70 flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-sm" style="font-variation-settings: 'opsz' 20">schedule</span> {{ app.created_at|timesince }} ago
+                            </div>
+                        </div>
+                        <span class="material-symbols-outlined text-outline group-hover:text-primary transition-all group-hover:translate-x-1" data-icon="chevron_right">chevron_right</span>
+                    </a>
+                    {% empty %}
+                    <div class="px-8 py-12 text-center text-on-surface-variant opacity-60">
+                        No recent applications found.
+                    </div>
+                    {% endfor %}
 </div>
 </div>
 </div>

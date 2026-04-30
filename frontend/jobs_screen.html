@@ -290,107 +290,56 @@ function toggleJDMode(mode) {
 </section>
 <!-- Consolidated Candidate Result -->
 <section>
-<div class="flex items-center justify-between mb-4">
-<h3 class="font-label-uppercase text-slate-500 uppercase tracking-widest text-[11px]">Analysis Result</h3>
-<div class="flex items-center gap-2">
-<span class="text-xs text-slate-400">Processed 2 mins ago</span>
-</div>
-</div>
-<div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-<div class="p-6">
-<div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
-<div class="flex items-center gap-5">
-<div class="relative">
-<img alt="Candidate Profile" class="w-16 h-16 rounded-full object-cover border-2 border-white ring-1 ring-slate-200" data-alt="Professional portrait of a female software engineer, Sarah Jenkins, smiling softly with a blurred office background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBiBa8UoBqmb-su6LRxfbmqEDvC3DCJooEikTTtrKleCo9FcG8ffDQVV73tDkyW7mpzQ9qHlE-zSOMiiFgV9uCWycp14EcgVyPh4-6WJihxorDFmxPmbL082nZUGLcr4gzmtg5TbmoIDRZ1dAll8kQuNCV1Tk7RHurOJL8by4UlK_6dXmrzhzoGvsAfU5rhrRQ0pr2vHZmc5yenq4qU5zdSXqMIkkMkNYRKjXhkV4r6Cu9UBnG9a4ptNsezowMlOUVkMmIq6ZVXJow"/>
-<div class="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 border-2 border-white rounded-full flex items-center justify-center shadow-sm">
-<span class="material-symbols-outlined text-white text-[14px]" style="font-variation-settings: 'FILL' 1;">check</span>
-</div>
-</div>
-<div>
-<h4 class="text-xl font-bold text-slate-900 leading-tight">Sarah Jenkins</h4>
-<div class="flex items-center gap-3 mt-1">
-<span class="flex items-center gap-1 text-slate-500 text-sm">
-<span class="material-symbols-outlined text-[16px]">mail</span>
-                                            sarah.jenkins@example.com
-                                        </span>
-</div>
-</div>
-</div>
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
-<div>
-<p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Resume Status</p>
-<div class="flex items-center gap-1.5 text-slate-700 font-medium text-sm">
-<span class="w-2 h-2 rounded-full bg-blue-500"></span>
-                                        Analyzed
-                                    </div>
-</div>
-<div>
-<p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Match Result</p>
-<div class="inline-flex items-center px-2 py-0.5 rounded bg-green-50 text-green-700 font-bold text-xs border border-green-100">
-                                        SUITABLE
-                                    </div>
-</div>
-<div>
-<p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Workflow</p>
-<div class="flex items-center gap-1.5 text-slate-700 font-medium text-sm">
-                                        Invite Sent
-                                    </div>
-</div>
-<div>
-<p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Score</p>
-<div class="text-primary font-bold text-sm">94/100</div>
-</div>
-</div>
-</div>
-<div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-<div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
-<h5 class="text-[11px] font-bold text-slate-500 uppercase mb-2">Key Highlights</h5>
-<ul class="space-y-2">
-<li class="flex items-start gap-2 text-sm text-slate-700">
-<span class="material-symbols-outlined text-green-600 text-sm mt-0.5">verified</span>
-                                        6+ years React experience
-                                    </li>
-<li class="flex items-start gap-2 text-sm text-slate-700">
-<span class="material-symbols-outlined text-green-600 text-sm mt-0.5">verified</span>
-                                        Previous Senior role at Tier 1 Tech
-                                    </li>
-</ul>
-</div>
-<div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
-<h5 class="text-[11px] font-bold text-slate-500 uppercase mb-2">Interview Focus</h5>
-<ul class="space-y-2">
-<li class="flex items-start gap-2 text-sm text-slate-700">
-<span class="material-symbols-outlined text-amber-500 text-sm mt-0.5">info</span>
-                                        Depth of Micro-frontend knowledge
-                                    </li>
-<li class="flex items-start gap-2 text-sm text-slate-700">
-<span class="material-symbols-outlined text-amber-500 text-sm mt-0.5">info</span>
-                                        Leadership in Agile environments
-                                    </li>
-</ul>
-</div>
-<div class="flex flex-col justify-center gap-3">
-<a href="/report/1/" class="w-full py-2.5 bg-primary text-white rounded-lg font-semibold text-sm shadow-sm hover:bg-primary-container transition-colors text-center">
-                                    View Full AI Report
-                                </a>
-<button class="w-full py-2.5 bg-white border border-slate-200 text-slate-700 rounded-lg font-semibold text-sm hover:bg-slate-50 transition-colors">
-                                    Schedule Interview
-                                </button>
-</div>
-</div>
-</div>
-<div class="bg-slate-50 px-6 py-3 border-t border-slate-100 flex items-center justify-between">
-<div class="flex items-center gap-4">
-<span class="text-xs text-slate-500 flex items-center gap-1">
-<span class="material-symbols-outlined text-[14px]">attachment</span>
-                                sarah_resume_v2.pdf
-                            </span>
-</div>
-<div class="flex gap-4">
-<span class="text-xs font-medium text-slate-400">ID: CAND-9902</span>
-</div>
-</div>
-</div>
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="font-label-uppercase text-slate-500 uppercase tracking-widest text-[11px]">Analysis Result</h3>
+    </div>
+    <div class="space-y-4">
+        {% for app in applications %}
+        <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+            <div class="p-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div class="flex items-center gap-5">
+                        <div class="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center text-primary">
+                            <span class="material-symbols-outlined text-3xl">person</span>
+                        </div>
+                        <div>
+                            <h4 class="text-xl font-bold text-slate-900 leading-tight">Candidate Profile</h4>
+                            <p class="text-body-base text-slate-500">{{ app.job_title }}</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status</p>
+                            <div class="flex items-center gap-1.5 text-slate-700 font-medium text-sm">
+                                <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                                Processed
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Date</p>
+                            <div class="text-on-surface font-medium text-sm">{{ app.created_at|date:"M d, Y" }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end gap-3">
+                    <a href="{% url 'report_detail' app.id %}" class="px-6 py-2 bg-primary text-white rounded-lg font-semibold text-sm shadow-sm hover:bg-primary/90 transition-colors">
+                        View Details
+                    </a>
+                    {% if app.resume_file %}
+                    <a href="{{ app.resume_file.url }}" target="_blank" class="px-6 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg font-semibold text-sm hover:bg-slate-50 transition-colors flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">download</span> Resume
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="bg-white border border-slate-200 rounded-xl p-12 text-center text-slate-400">
+            <span class="material-symbols-outlined text-4xl mb-2">analytics</span>
+            <p>No applications processed yet. Upload a JD and Resume above to start.</p>
+        </div>
+        {% endfor %}
+    </div>
 </section>
 </div>
 </main>

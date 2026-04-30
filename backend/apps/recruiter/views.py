@@ -27,10 +27,12 @@ def logout_view(request):
 @login_required
 def dashboard_view(request):
     total_applications = JobApplication.objects.filter(recruiter=request.user).count()
-    # For now, we'll use the same count or a slightly modified one to show variety
+    recent_applications = JobApplication.objects.filter(recruiter=request.user).order_by('-created_at')[:5]
+    
     context = {
-        'total_jobs': total_applications, # Assuming each application is for a job
+        'total_jobs': total_applications, # Assuming each application is for a job in this simplified model
         'total_candidates': total_applications,
+        'recent_applications': recent_applications,
     }
     return render(request, 'dashboard_screen.html', context)
 
@@ -60,7 +62,8 @@ def jobs_view(request):
 
 @login_required
 def reports_view(request):
-    return render(request, 'reports_screen.html')
+    applications = JobApplication.objects.filter(recruiter=request.user).order_by('-created_at')
+    return render(request, 'reports_screen.html', {'applications': applications})
 
 @login_required
 def report_detail_view(request, id):
