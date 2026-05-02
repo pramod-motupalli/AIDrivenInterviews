@@ -1,35 +1,37 @@
-# Environments
+# Secrets — NEVER commit these
 .env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
+.env.*
+!.env.example
+*.pem
+*.p12
+*.json.key
+google-credentials.json
 
 # Python
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-*.egg
 *.egg-info/
 dist/
 build/
+.venv/
+venv/
+env/
 
 # Node
 node_modules/
 dist/
-dist-ssr/
-*.local
+.cache/
 
-# Editor directories and files
-.idea/
+# Django
+db.sqlite3
+staticfiles/
+media/
+
+# IDE
 .vscode/
-*.swp
-*.swo
-*~
-.DS_Store
+.idea/
+*.DS_Store
 
-# DB
-*.sqlite3
+# Logs
+*.log
+logs/
