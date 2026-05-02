@@ -28,6 +28,8 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     )
 
     email = models.EmailField(_('email address'), unique=True)
+    full_name = models.CharField(max_length=100, blank=True)
+    position = models.CharField(max_length=100, blank=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='candidate')
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -36,7 +38,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     objects = CustomUserManager()
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = []
+    REQUIRED_FIELDS = ['full_name', 'position']
 
     def __str__(self):
         return self.email
