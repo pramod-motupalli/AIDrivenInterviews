@@ -6,6 +6,8 @@
 *.p12
 *.json.key
 google-credentials.json
+backend/keys/
+*.json
 
 # Python
 __pycache__/

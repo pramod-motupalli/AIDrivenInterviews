@@ -4,20 +4,24 @@ from .models import User
 from notifications.utils import send_approval_email, send_rejection_email
 
 def approve_recruiters(modeladmin, request, queryset):
+    count = 0
     for user in queryset.filter(role='recruiter', is_approved=False):
         user.is_approved = True
         user.save()
-        send_approval_email(user)
-    modeladmin.message_user(request, f"Selected recruiters approved and notified by email.")
-approve_recruiters.short_description = "✅ Approve selected recruiters & send email"
+        # Email is now handled by save_model override below
+        count += 1
+    modeladmin.message_user(request, f"{count} recruiters approved and notified.")
+approve_recruiters.short_description = "✅ Approve selected recruiters"
 
 def reject_recruiters(modeladmin, request, queryset):
-    for user in queryset.filter(role='recruiter', is_approved=False):
+    count = 0
+    for user in queryset.filter(role='recruiter'):
         user.is_active = False
         user.save()
         send_rejection_email(user)
-    modeladmin.message_user(request, f"Selected recruiters rejected and notified by email.")
-reject_recruiters.short_description = "❌ Reject selected recruiters & send email"
+        count += 1
+    modeladmin.message_user(request, f"{count} recruiters rejected and notified.")
+reject_recruiters.short_description = "❌ Reject selected recruiters"
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
@@ -32,6 +36,16 @@ class UserAdmin(BaseUserAdmin):
         ('Role & Status', {'fields': ('role', 'is_approved', 'is_first_login')}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser')}),
     )
+
+    def save_model(self, request, obj, form, change):
+        """Trigger emails when status changes in the admin detail view."""
+        if change: # If this is an update
+            old_user = User.objects.get(pk=obj.pk)
+            # If was NOT approved and now IS approved
+            if not old_user.is_approved and obj.is_approved and obj.role == 'recruiter':
+                send_approval_email(obj)
+        
+        super().save_model(request, obj, form, change)
     add_fieldsets = (
         (None, {
             'classes': ('wide',),

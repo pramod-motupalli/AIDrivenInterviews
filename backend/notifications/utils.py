@@ -46,3 +46,17 @@ def send_rejection_email(user, reason=''):
         },
         recipient_list=[user.email]
     )
+def send_new_recruiter_notification(user):
+    """Send an alert email to the admin when a new recruiter registers."""
+    # Django Admin URL for user management
+    admin_url = "http://localhost:8000/admin/users/user/" 
+    
+    send_html_email(
+        subject="🔔 New Recruiter Registration Awaiting Approval",
+        template_name="emails/admin_new_recruiter.html",
+        context={
+            'recruiter_email': user.email,
+            'admin_url': admin_url,
+        },
+        recipient_list=[settings.DEFAULT_FROM_EMAIL]
+    )

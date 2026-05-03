@@ -6,7 +6,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework import viewsets
 from .serializers import CustomTokenObtainPairSerializer, RecruiterRegistrationSerializer, UserProfileSerializer
 from django.contrib.auth import get_user_model
-from notifications.utils import send_approval_email, send_rejection_email
+from notifications.utils import send_approval_email, send_rejection_email, send_new_recruiter_notification
 
 User = get_user_model()
 
@@ -19,7 +19,9 @@ class RecruiterRegisterView(APIView):
     def post(self, request):
         serializer = RecruiterRegistrationSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            user = serializer.save()
+            # Notify the admin (you)
+            send_new_recruiter_notification(user)
             return Response(
                 {"message": "Registration successful. Your request has been sent to the admin for approval. You will receive an email once reviewed."},
                 status=status.HTTP_201_CREATED
