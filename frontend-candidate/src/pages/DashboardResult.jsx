@@ -5,6 +5,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import LayoutWrapper from '../components/LayoutWrapper';
 
+
 const HeroCard = () => {
   const navigate = useNavigate();
   return (
@@ -29,44 +30,6 @@ const HeroCard = () => {
         <div className="w-32 h-32 md:w-40 md:h-40 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center border border-white/20 shadow-xl">
           <Trophy size={64} className="text-white drop-shadow-md" />
         </div>
-      </div>
-    </div>
-  );
-};
-
-const JourneyTimeline = () => {
-  const steps = [
-    { title: "Application Submitted", date: "Oct 12", status: "completed" },
-    { title: "Initial Screening", date: "Oct 15", status: "completed" },
-    { title: "Technical Assessment", date: "Oct 18", status: "completed" },
-    { title: "Shortlisted for Final Round", date: "Oct 20", status: "active" }
-  ];
-
-  return (
-    <div className="bg-white rounded-xl shadow-sm p-8 border border-slate-100 h-full">
-      <h3 className="text-xl font-bold text-slate-800 mb-8">Journey Timeline</h3>
-      <div className="relative border-l-4 border-indigo-500 pl-6 space-y-8 ml-3">
-        {steps.map((step, index) => (
-          <div key={index} className="relative">
-            <div className="absolute -left-[37px] top-1">
-              {step.status === 'completed' ? (
-                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center border-4 border-white shadow-sm">
-                  <CheckCircle2 size={14} className="text-white" />
-                </div>
-              ) : (
-                <div className="w-6 h-6 bg-white border-4 border-indigo-500 rounded-full flex items-center justify-center shadow-sm">
-                  <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
-                </div>
-              )}
-            </div>
-            <div>
-              <h4 className={`font-bold text-lg mb-1 ${step.status === 'active' ? 'text-indigo-600' : 'text-slate-800'}`}>
-                {step.title}
-              </h4>
-              <p className="text-slate-500 text-sm">{step.date}</p>
-            </div>
-          </div>
-        ))}
       </div>
     </div>
   );
@@ -179,30 +142,23 @@ const ChecklistSection = () => (
 
 const DashboardResult = () => {
   return (
-    <LayoutWrapper title="Candidate Dashboard">
+    <LayoutWrapper title="Candidate Dashboard" currentStep="decision">
       <HeroCard />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch pt-2">
         <div className="md:col-span-2 flex flex-col h-full">
-          <JourneyTimeline />
+          <SummaryCard />
         </div>
         <div className="flex flex-col h-full">
           <NextStepsCard />
         </div>
       </div>
 
-      <SummaryCard />
-
       <ChecklistSection />
-
-      <div className="text-center pt-8 pb-4">
-        <p className="text-slate-500 flex items-center justify-center gap-2 font-medium">
-          <Mail size={18} />
-          Need assistance? <a href="#" className="text-indigo-600 font-bold hover:underline">Contact Recruiting Team</a>
-        </p>
-      </div>
     </LayoutWrapper>
   );
 };
 
+
 export default DashboardResult;
+

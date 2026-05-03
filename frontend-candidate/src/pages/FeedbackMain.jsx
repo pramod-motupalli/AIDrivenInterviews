@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Star, Home, Video, BarChart2, User, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import ApplicationRoadmap from '../components/ApplicationRoadmap';
 import api from '../api/client';
 
 const FeedbackMain = () => {
@@ -24,9 +25,8 @@ const FeedbackMain = () => {
       setIsSubmitting(true);
       setError(null);
 
-      // Simulated API Call: api.post('/feedback', { rating, difficulty, comments })
-      // In reality, this would be: await api.post('/feedback', { rating, difficulty, comments });
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network latency
+      // Simulated API Call
+      await new Promise(resolve => setTimeout(resolve, 1500)); 
       
       navigate('/review');
     } catch (err) {
@@ -84,6 +84,7 @@ const FeedbackMain = () => {
   return (
     <div className="min-h-screen bg-[#F8F9FF] font-sans flex flex-col">
       {renderTopNav()}
+      <ApplicationRoadmap currentStep="feedback" />
 
       <main className="flex-1 px-6 pt-8 pb-32 max-w-xl mx-auto w-full">
         
@@ -198,3 +199,4 @@ const FeedbackMain = () => {
 };
 
 export default FeedbackMain;
+

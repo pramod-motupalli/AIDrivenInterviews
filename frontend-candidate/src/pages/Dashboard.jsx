@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  CheckSquare, Circle, AlertCircle, CheckCircle2, ChevronRight, MapPin, Clock, Calendar, HelpCircle, ExternalLink, Loader2
+  CheckSquare, Circle, AlertCircle, CheckCircle2, ChevronRight, MapPin, Clock, Calendar, ExternalLink, Loader2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import LayoutWrapper from '../components/LayoutWrapper';
 import api from '../api/client';
+
 
 const WelcomeSection = ({ userName, jobTitle }) => (
   <div className="mb-8">
@@ -27,54 +28,6 @@ const AlertBanner = () => (
     </div>
   </div>
 );
-
-const HorizontalRoadmap = ({ currentStepId }) => {
-  const steps = [
-    { id: 'invitation', title: "Invitation", status: "completed" },
-    { id: 'system-check', title: "System Check", status: "active" },
-    { id: 'interview', title: "Interview", status: "upcoming" },
-    { id: 'feedback', title: "Feedback", status: "upcoming" },
-    { id: 'review', title: "Review", status: "upcoming" },
-    { id: 'decision', title: "Decision", status: "upcoming" }
-  ];
-
-  return (
-    <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-100 w-full mb-6">
-      <h3 className="text-lg font-bold text-slate-800 mb-6">Application Roadmap</h3>
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        {steps.map((step, index) => (
-          <div key={index} className="flex flex-col items-center text-center relative">
-            {index !== steps.length - 1 && (
-              <div className="hidden md:block absolute top-6 left-[60%] right-[-40%] h-[2px] bg-slate-100 z-0">
-                {step.status === 'completed' && <div className="h-full bg-indigo-500 w-full"></div>}
-              </div>
-            )}
-            
-            <div className="relative z-10 w-12 h-12 rounded-full flex items-center justify-center mb-3 bg-white border-2 border-transparent">
-              {step.status === 'completed' ? (
-                <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center shadow-sm text-white border-2 border-white">
-                  <CheckCircle2 size={16} />
-                </div>
-              ) : step.status === 'active' ? (
-                <div className="w-10 h-10 bg-white border-4 border-indigo-500 rounded-full flex items-center justify-center shadow-md ring-4 ring-indigo-50">
-                  <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full animate-pulse"></div>
-                </div>
-              ) : (
-                <div className="w-10 h-10 bg-slate-50 border-2 border-slate-200 rounded-full flex items-center justify-center shadow-sm">
-                  <div className="w-2.5 h-2.5 bg-slate-300 rounded-full"></div>
-                </div>
-              )}
-            </div>
-            
-            <h4 className={`font-bold text-sm ${step.status === 'active' ? 'text-indigo-600' : step.status === 'completed' ? 'text-slate-800' : 'text-slate-400'}`}>
-              {step.title}
-            </h4>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
 
 const NextStepCard = () => {
   const navigate = useNavigate();
@@ -150,31 +103,6 @@ const ChecklistCard = ({ checklist }) => (
   </div>
 );
 
-const HelpCard = () => {
-  const navigate = useNavigate();
-  return (
-    <div 
-      onClick={() => navigate('/help')}
-      className="bg-[#EEF2FF] rounded-xl shadow-sm p-6 border border-indigo-100 h-full flex flex-col justify-between cursor-pointer hover:bg-indigo-50 hover:shadow-md transition-all group"
-    >
-      <div>
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-full bg-indigo-200 flex items-center justify-center text-indigo-700">
-            <HelpCircle size={20} />
-          </div>
-          <h3 className="text-xl font-bold text-indigo-900">Need Help?</h3>
-        </div>
-        <p className="text-indigo-700 text-[15px] leading-relaxed mb-6">
-          Having trouble with the setup or have questions about the AI interview process?
-        </p>
-      </div>
-      <button className="text-indigo-600 font-bold flex items-center gap-2 group-hover:text-indigo-800 transition-colors">
-        Contact Support Center <ExternalLink size={16} />
-      </button>
-    </div>
-  );
-};
-
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -184,15 +112,13 @@ const Dashboard = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        // Simulated API Call: api.get('/candidate/dashboard')
-        // In reality, this would be: const response = await api.get('/candidate/dashboard');
-        
-        await new Promise(resolve => setTimeout(resolve, 800)); // Simulate network latency
+        // Simulated API Call
+        await new Promise(resolve => setTimeout(resolve, 800)); 
 
         const mockResponse = {
           user: { name: 'Alex' },
           job: { title: 'Senior UX Designer' },
-          application: { status: 'System Check Pending', currentStep: 'system-check' },
+          application: { status: 'System Check Pending', currentStep: 'invitation' },
           interview: {
             date: 'October 24, 2026',
             time: '10:00 AM - 11:30 AM EST',
@@ -239,18 +165,13 @@ const Dashboard = () => {
   }
 
   return (
-    <LayoutWrapper title="Candidate Dashboard" maxWidthClass="max-w-7xl">
+    <LayoutWrapper title="Candidate Dashboard" maxWidthClass="max-w-7xl" currentStep="invitation">
       <WelcomeSection userName={dashboardData.user.name} jobTitle={dashboardData.job.title} />
       <AlertBanner />
       
-      {/* 1. Full Width Horizontal Roadmap */}
-      <HorizontalRoadmap currentStepId={dashboardData.application.currentStep} />
-      
-      {/* 2. Prominent Full Width Next Step Card */}
       <NextStepCard />
 
-      {/* 3. Grid of Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
         <div className="flex flex-col h-full">
           <InterviewDetailsCard 
             interviewDate={dashboardData.interview.date}
@@ -261,12 +182,11 @@ const Dashboard = () => {
         <div className="flex flex-col h-full">
           <ChecklistCard checklist={dashboardData.checklist} />
         </div>
-        <div className="flex flex-col h-full">
-          <HelpCard />
-        </div>
       </div>
     </LayoutWrapper>
   );
 };
 
+
 export default Dashboard;
+

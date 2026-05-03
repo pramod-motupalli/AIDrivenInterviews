@@ -5,6 +5,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import LayoutWrapper from '../components/LayoutWrapper';
 
+
 const ChecklistSection = () => (
   <div className="space-y-4">
     <div className="bg-white rounded-xl shadow-sm p-5 border border-slate-100 flex items-start gap-4">
@@ -76,7 +77,6 @@ const CountdownCard = () => {
       <p className="text-slate-500 text-sm mb-6 max-w-xs mx-auto">
         Please wait while the interviewer joins the session. Do not close this tab.
       </p>
-      {/* Changed to active for flow demonstration */}
       <button 
         onClick={() => navigate('/interview')}
         className="w-full bg-indigo-600 text-white font-bold py-4 px-6 rounded-xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-200"
@@ -92,7 +92,7 @@ const CountdownCard = () => {
 
 const WaitingRoom = () => {
   return (
-    <LayoutWrapper title="Waiting Room" breadcrumbs={["System Check", "Waiting Room"]} maxWidthClass="max-w-6xl">
+    <LayoutWrapper title="Waiting Room" breadcrumbs={["System Check", "Waiting Room"]} maxWidthClass="max-w-6xl" currentStep="interview">
       <div className="text-center py-2">
         <h1 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Getting Ready</h1>
         <p className="text-slate-500 text-lg max-w-xl mx-auto">
@@ -110,14 +110,10 @@ const WaitingRoom = () => {
           <CountdownCard />
         </div>
       </div>
-
-      <div className="text-center pt-6">
-        <a href="#" className="text-indigo-600 font-bold hover:text-indigo-800 hover:underline transition-all">
-          Need help? Contact support
-        </a>
-      </div>
     </LayoutWrapper>
   );
 };
 
+
 export default WaitingRoom;
+

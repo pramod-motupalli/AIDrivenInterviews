@@ -5,6 +5,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import LayoutWrapper from '../components/LayoutWrapper';
 
+
 const ApplicationCard = () => (
   <div className="bg-white rounded-2xl shadow-sm p-6 border-l-4 border-indigo-500 w-full">
     <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
@@ -34,46 +35,6 @@ const ApplicationCard = () => (
     </div>
   </div>
 );
-
-const JourneyStepper = () => {
-  const steps = [
-    { title: "Invitation", status: "completed" },
-    { title: "System Check", status: "completed" },
-    { title: "Interview", status: "completed" },
-    { title: "Feedback", status: "completed" },
-    { title: "Review", status: "active" }
-  ];
-
-  return (
-    <div className="mt-8 mb-6 w-full">
-      <h3 className="text-lg font-bold text-slate-800 mb-6">Application Journey</h3>
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        {steps.map((step, index) => (
-          <div key={index} className="flex flex-col items-center text-center relative group bg-white rounded-xl shadow-sm p-4 lg:p-6 border border-slate-100 h-full">
-            {step.status === 'completed' && (
-              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-3 lg:mb-4 shadow-sm border border-green-200">
-                <CheckCircle2 size={24} />
-              </div>
-            )}
-            {step.status === 'active' && (
-              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 mb-3 lg:mb-4 shadow-sm border border-indigo-200 ring-4 ring-indigo-50">
-                <div className="w-3 h-3 lg:w-4 lg:h-4 bg-indigo-600 rounded-full animate-pulse"></div>
-              </div>
-            )}
-            {step.status === 'future' && (
-              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-3 lg:mb-4 border border-slate-200">
-                <div className="w-3 h-3 bg-slate-300 rounded-full"></div>
-              </div>
-            )}
-            <h4 className={`font-bold text-xs lg:text-sm ${step.status === 'active' ? 'text-indigo-600' : step.status === 'completed' ? 'text-slate-800' : 'text-slate-400'}`}>
-              {step.title}
-            </h4>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
 
 const InsightsCard = () => (
   <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-100 h-full flex flex-col">
@@ -134,9 +95,8 @@ const DashboardUnderReview = () => {
   }, [navigate]);
 
   return (
-    <LayoutWrapper title="Candidate Dashboard">
+    <LayoutWrapper title="Candidate Dashboard" currentStep="review">
       <ApplicationCard />
-      <JourneyStepper />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch pt-2">
         <div className="flex flex-col h-full">
           <InsightsCard />
@@ -149,4 +109,6 @@ const DashboardUnderReview = () => {
   );
 };
 
+
 export default DashboardUnderReview;
+

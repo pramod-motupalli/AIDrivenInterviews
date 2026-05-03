@@ -2,13 +2,17 @@ import React from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import MobileNavigation from './MobileNavigation';
+import ApplicationRoadmap from './ApplicationRoadmap';
 
-const LayoutWrapper = ({ children, title, breadcrumbs, maxWidthClass = "max-w-7xl" }) => {
+const LayoutWrapper = ({ children, title, breadcrumbs, maxWidthClass = "max-w-7xl", currentStep }) => {
   return (
     <div className="flex min-h-screen bg-[#F8F9FF] font-sans text-slate-800 pb-24 lg:pb-0">
       <Sidebar />
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen w-full overflow-x-hidden">
         <Header title={title} breadcrumbs={breadcrumbs} />
+        
+        {currentStep && <ApplicationRoadmap currentStep={currentStep} />}
+        
         <main className="flex-1 w-full px-6 py-6">
           <div className={`${maxWidthClass} mx-auto space-y-6`}>
             {children}
@@ -30,3 +34,4 @@ const LayoutWrapper = ({ children, title, breadcrumbs, maxWidthClass = "max-w-7x
 };
 
 export default LayoutWrapper;
+

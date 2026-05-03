@@ -7,6 +7,7 @@ import DashboardResult from './pages/DashboardResult'
 import FeedbackMain from './pages/FeedbackMain'
 import DashboardUnderReview from './pages/DashboardUnderReview'
 import AIAssistance from './pages/AIAssistance'
+import CandidateLogin from './pages/CandidateLogin'
 import './index.css'
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Dashboard />} />
+        <Route path="/login" element={<CandidateLogin />} />
         <Route path="/system-check" element={<SystemCheck />} />
         <Route path="/waiting-room" element={<WaitingRoom />} />
         <Route path="/interview" element={<Interview />} />

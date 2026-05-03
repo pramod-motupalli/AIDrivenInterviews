@@ -5,6 +5,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import LayoutWrapper from '../components/LayoutWrapper';
 
+
 const CameraSection = () => (
   <div className="space-y-4 h-full flex flex-col">
     <div className="bg-slate-900 rounded-xl shadow overflow-hidden relative flex-1 min-h-[250px] md:min-h-[300px] w-full h-64">
@@ -132,21 +133,9 @@ const CTASection = () => {
   );
 };
 
-const SupportCard = () => (
-  <div className="bg-[#EFF6FF] rounded-xl p-6 flex flex-col sm:flex-row justify-between items-center gap-4 border border-blue-100">
-    <div>
-      <h4 className="font-bold text-blue-900 mb-1 text-lg">Need Assistance?</h4>
-      <p className="text-blue-700 text-sm">Our technical support team is ready to help you.</p>
-    </div>
-    <button className="bg-white text-blue-700 font-bold py-3 px-6 rounded-lg shadow-sm border border-blue-200 hover:bg-blue-50 transition-colors whitespace-nowrap text-sm">
-      Contact Support
-    </button>
-  </div>
-);
-
 const SystemCheck = () => {
   return (
-    <LayoutWrapper title="System Check" breadcrumbs={["System Check", "Waiting Room"]} maxWidthClass="max-w-6xl">
+    <LayoutWrapper title="System Check" breadcrumbs={["System Check", "Waiting Room"]} maxWidthClass="max-w-6xl" currentStep="system-check">
       <div className="text-center py-2">
         <h1 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Ready to start?</h1>
         <p className="text-slate-500 text-lg">Let's make sure your equipment is working properly.</p>
@@ -162,9 +151,10 @@ const SystemCheck = () => {
       </div>
 
       <CTASection />
-      <SupportCard />
     </LayoutWrapper>
   );
 };
 
+
 export default SystemCheck;
+
