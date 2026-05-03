@@ -22,9 +22,10 @@ class FileUploadView(APIView):
         if file_obj.size > 5 * 1024 * 1024:
             return Response({'error': 'File size exceeds 5MB limit'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # PDF validation (Only check extension for MVP)
-        if not file_obj.name.lower().endswith('.pdf'):
-            return Response({'error': 'Only PDF files are allowed for resumes'}, status=status.HTTP_400_BAD_REQUEST)
+        # PDF/DOCX validation
+        allowed_extensions = ['.pdf', '.docx']
+        if not any(file_obj.name.lower().endswith(ext) for ext in allowed_extensions):
+            return Response({'error': 'Only PDF and DOCX files are allowed'}, status=status.HTTP_400_BAD_REQUEST)
 
         file_path = default_storage.save(f'uploads/{file_obj.name}', file_obj)
         file_url = default_storage.url(file_path)

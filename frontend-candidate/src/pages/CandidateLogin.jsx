@@ -6,17 +6,10 @@ const CandidateLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const validateEmail = (email) => {
-    return String(email)
-      .toLowerCase()
-      .match(
-        /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
-      );
-  };
-
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -25,13 +18,31 @@ const CandidateLogin = () => {
       return;
     }
 
-    if (!validateEmail(email)) {
-      setError('Enter a valid email address');
-      return;
+    setLoading(true);
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/v1/auth/login/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (data.role !== 'candidate') {
+          setError('Access denied. This portal is for candidates only.');
+          return;
+        }
+        localStorage.setItem('access', data.access);
+        localStorage.setItem('refresh', data.refresh);
+        localStorage.setItem('role', data.role);
+        navigate('/');
+      } else {
+        setError(data.detail || 'Invalid credentials');
+      }
+    } catch {
+      setError('Connection failed');
+    } finally {
+      setLoading(false);
     }
-
-    // Success: Navigate to dashboard
-    navigate('/');
   };
 
   return (
@@ -93,9 +104,10 @@ const CandidateLogin = () => {
           {/* Login Button */}
           <button 
             type="submit"
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors"
+            disabled={loading}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
           >
-            Login
+            {loading ? 'Signing in...' : 'Login'}
           </button>
         </form>
       </div>

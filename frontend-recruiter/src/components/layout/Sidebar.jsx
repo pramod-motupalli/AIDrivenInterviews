@@ -1,7 +1,16 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 
 export default function Sidebar() {
+  const navigate = useNavigate();
+  
+  const handleLogout = () => {
+    localStorage.removeItem('access');
+    localStorage.removeItem('refresh');
+    localStorage.removeItem('role');
+    navigate('/');
+  };
+
   const getNavClass = ({ isActive }) =>
     `flex items-center gap-3 px-4 py-3 font-medium rounded-xl transition-all duration-200 ${
       isActive
@@ -44,7 +53,10 @@ export default function Sidebar() {
 
           {/* Logout */}
           <div className="pt-4 border-t border-gray-100">
-            <button className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-gray-500 border border-gray-200 hover:bg-gray-50 hover:text-gray-700 transition-all duration-200 text-sm font-medium">
+            <button 
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-gray-500 border border-gray-200 hover:bg-gray-50 hover:text-gray-700 transition-all duration-200 text-sm font-medium"
+            >
               <span className="material-symbols-outlined text-[20px]">logout</span>
               <span>Log Out</span>
             </button>

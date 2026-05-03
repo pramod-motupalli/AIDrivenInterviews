@@ -24,7 +24,9 @@ const Sidebar = () => {
   };
 
   const handleLogout = () => {
-    // Navigate to login page
+    localStorage.removeItem('access');
+    localStorage.removeItem('refresh');
+    localStorage.removeItem('role');
     navigate('/login');
   };
 

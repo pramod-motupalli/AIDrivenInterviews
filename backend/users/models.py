@@ -44,3 +44,21 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return f"{self.email} ({self.role})"
+
+class AdminProxy(User):
+    class Meta:
+        proxy = True
+        verbose_name = 'Admin'
+        verbose_name_plural = 'Admins'
+
+class RecruiterProxy(User):
+    class Meta:
+        proxy = True
+        verbose_name = 'Recruiter'
+        verbose_name_plural = 'Recruiters'
+
+class CandidateProxy(User):
+    class Meta:
+        proxy = True
+        verbose_name = 'Candidate'
+        verbose_name_plural = 'Candidates'

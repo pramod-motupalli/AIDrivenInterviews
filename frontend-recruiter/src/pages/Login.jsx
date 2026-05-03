@@ -34,8 +34,13 @@ export default function Login() {
       });
       const data = await res.json();
       if (res.ok) {
+        if (data.role === 'candidate') {
+          setMessage({ type: 'error', text: 'Access denied. Candidates cannot access the recruiter portal.' });
+          return;
+        }
         localStorage.setItem('access', data.access);
         localStorage.setItem('refresh', data.refresh);
+        localStorage.setItem('role', data.role);
         navigate('/dashboard');
       } else {
         setMessage({ type: 'error', text: data.detail || 'Invalid credentials. Please try again.' });
