@@ -21,7 +21,17 @@ export default function UploadBox({ icon, title, description, onFileSelect, load
   };
 
   return (
-    <Card className="bg-white border-slate-200 rounded-xl p-6 shadow-sm flex flex-col items-center justify-center border-dashed border-2 bg-slate-50/30 group hover:border-primary/40 transition-colors cursor-pointer">
+    <Card 
+      className="bg-white border-slate-200 rounded-xl p-6 shadow-sm flex flex-col items-center justify-center border-dashed border-2 bg-slate-50/30 group hover:border-primary/40 transition-colors cursor-pointer"
+      onClick={handleClick}
+    >
+      <input 
+        type="file" 
+        className="hidden" 
+        ref={fileInputRef} 
+        onChange={handleFileChange} 
+        accept=".pdf,.docx"
+      />
       <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center border border-slate-200 shadow-sm mb-4 group-hover:text-primary transition-colors">
         <span className="material-symbols-outlined">{icon}</span>
       </div>

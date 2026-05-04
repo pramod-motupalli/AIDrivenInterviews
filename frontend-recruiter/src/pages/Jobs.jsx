@@ -70,14 +70,32 @@ export default function Jobs() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <UploadBox 
           icon="description"
-          title="Upload Job Description"
+          title={jdFile ? jdFile.name : "Upload Job Description"}
           description="PDF, DOCX, or text content"
+          onFileSelect={setJdFile}
         />
         <UploadBox 
           icon="upload_file"
-          title="Upload Candidate Resume"
+          title={resumeFile ? resumeFile.name : "Upload Candidate Resume"}
           description="PDF or DOCX supported"
+          onFileSelect={setResumeFile}
         />
+      </div>
+
+      {message && (
+        <div className={`p-4 rounded-xl text-sm font-semibold ${message.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+          {message.text}
+        </div>
+      )}
+
+      <div className="flex justify-end">
+        <button 
+          onClick={handleUpload}
+          disabled={!jdFile || !resumeFile || loading}
+          className="bg-blue-600 text-white px-6 py-2 rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center gap-2"
+        >
+          {loading ? 'Uploading...' : 'Start Screening'}
+        </button>
       </div>
 
       {/* Job Details Section */}
