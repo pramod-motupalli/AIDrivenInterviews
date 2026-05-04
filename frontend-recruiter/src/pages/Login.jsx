@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 
 const API_BASE = 'http://127.0.0.1:8000/api/v1/auth';
 
@@ -10,18 +7,11 @@ export default function Login() {
   const navigate = useNavigate();
   const [mode, setMode] = useState('login'); // 'login' | 'register'
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState(null); // { type: 'success'|'error', text: '' }
+  const [message, setMessage] = useState(null);
 
-  // Form states
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [registerForm, setRegisterForm] = useState({ email: '', password: '', confirm: '' });
 
-  const switchMode = (newMode) => {
-    setMode(newMode);
-    setMessage(null);
-  };
-
-  /* ── LOGIN ─────────────────────────────────────────── */
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -38,16 +28,15 @@ export default function Login() {
         localStorage.setItem('refresh', data.refresh);
         navigate('/dashboard');
       } else {
-        setMessage({ type: 'error', text: data.detail || 'Invalid credentials. Please try again.' });
+        setMessage({ type: 'error', text: data.detail || 'Invalid credentials.' });
       }
     } catch {
-      setMessage({ type: 'error', text: 'Unable to reach the server. Please try later.' });
+      setMessage({ type: 'error', text: 'Server connection error.' });
     } finally {
       setLoading(false);
     }
   };
 
-  /* ── REGISTER ───────────────────────────────────────── */
   const handleRegister = async (e) => {
     e.preventDefault();
     if (registerForm.password !== registerForm.confirm) {
@@ -64,205 +53,137 @@ export default function Login() {
       });
       const data = await res.json();
       if (res.ok || res.status === 201) {
-        setMessage({ type: 'success', text: '✅ Request submitted! You will receive an email once the admin reviews your account.' });
-        setRegisterForm({ email: '', password: '', confirm: '' });
+        setMessage({ type: 'success', text: 'Access request submitted successfully!' });
       } else {
-        const errText = data.email?.[0] || data.password?.[0] || data.detail || 'Registration failed.';
-        setMessage({ type: 'error', text: errText });
+        setMessage({ type: 'error', text: data.detail || 'Registration failed.' });
       }
     } catch {
-      setMessage({ type: 'error', text: 'Unable to reach the server. Please try later.' });
+      setMessage({ type: 'error', text: 'Server connection error.' });
     } finally {
       setLoading(false);
     }
   };
 
-  const inputClass =
-    'w-full px-4 py-3.5 bg-surface-container-low border-outline-variant/60 rounded-xl focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary font-body-base text-on-surface placeholder:text-outline/60 h-auto';
-
   return (
-    <div className="font-body-base text-on-background min-h-screen flex flex-col items-center justify-center p-6 md:p-gutter relative overflow-hidden">
-      <main className="w-full max-w-md flex flex-col justify-center relative z-10">
-        <Card className="bg-surface-container-lowest rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.03)] border-outline-variant/30 flex flex-col overflow-hidden p-0">
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-[400px]">
+        
+        {/* Logo */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200 mb-4">
+            <span className="material-symbols-outlined text-white text-3xl">work</span>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900">Recruiter Portal</h1>
+          <p className="text-sm text-gray-500 mt-1">AI-Driven Hiring Platform</p>
+        </div>
 
-          {/* ── HEADER ── */}
-          <CardHeader className="px-10 pt-10 pb-6 text-center border-none">
-            <div className="mb-5 flex justify-center">
-              <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20">
-                <span className="material-symbols-outlined text-on-primary text-3xl">neurology</span>
-              </div>
-            </div>
+        {/* Card */}
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+          
+          {/* Tabs */}
+          <div className="flex border-b border-gray-100">
+            <button 
+              onClick={() => setMode('login')}
+              className={`flex-1 py-4 text-sm font-semibold transition-colors ${mode === 'login' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+              Sign In
+            </button>
+            <button 
+              onClick={() => setMode('register')}
+              className={`flex-1 py-4 text-sm font-semibold transition-colors ${mode === 'register' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+              Request Access
+            </button>
+          </div>
 
-            {/* Tab Toggle */}
-            <div className="flex rounded-xl bg-surface-container p-1 gap-1">
-              <button
-                type="button"
-                onClick={() => switchMode('login')}
-                className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
-                  mode === 'login'
-                    ? 'bg-surface-container-lowest text-primary shadow-sm'
-                    : 'text-on-surface-variant hover:text-on-surface'
-                }`}
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                onClick={() => switchMode('register')}
-                className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
-                  mode === 'register'
-                    ? 'bg-surface-container-lowest text-primary shadow-sm'
-                    : 'text-on-surface-variant hover:text-on-surface'
-                }`}
-              >
-                Request Access
-              </button>
-            </div>
-
-            {/* Subtitle */}
-            <p className="mt-4 text-on-surface-variant font-body-base">
-              {mode === 'login'
-                ? 'Enter your credentials to access your dashboard.'
-                : 'Submit a request — the admin will review and approve your account.'}
-            </p>
-          </CardHeader>
-
-          {/* ── FORM ── */}
-          <CardContent className="px-10 pb-10">
-
-            {/* Status message */}
+          <div className="p-8">
             {message && (
-              <div
-                className={`mb-5 px-4 py-3 rounded-xl text-sm font-medium ${
-                  message.type === 'success'
-                    ? 'bg-green-50 text-green-700 border border-green-200'
-                    : 'bg-red-50 text-red-700 border border-red-200'
-                }`}
-              >
+              <div className={`mb-6 p-4 rounded-lg text-sm font-medium ${message.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
                 {message.text}
               </div>
             )}
 
-            {/* ── LOGIN FORM ── */}
-            {mode === 'login' && (
-              <form className="space-y-5" onSubmit={handleLogin}>
-                <div className="flex flex-col gap-2">
-                  <label className="font-label-uppercase text-label-uppercase text-on-surface-variant uppercase tracking-wider" htmlFor="login-email">
-                    Email Address
-                  </label>
-                  <Input
-                    id="login-email"
-                    placeholder="recruiter@company.ai"
-                    type="email"
+            {mode === 'login' ? (
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Email Address</label>
+                  <input 
+                    type="email" 
                     required
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                    placeholder="name@company.com"
                     value={loginForm.email}
-                    onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
-                    className={inputClass}
+                    onChange={e => setLoginForm({...loginForm, email: e.target.value})}
                   />
                 </div>
-
-                <div className="flex flex-col gap-2">
-                  <div className="flex justify-between items-center">
-                    <label className="font-label-uppercase text-label-uppercase text-on-surface-variant uppercase tracking-wider" htmlFor="login-password">
-                      Password
-                    </label>
-                    <a className="font-body-sm text-body-sm text-primary font-medium hover:underline transition-colors" href="#">
-                      Forgot Password?
-                    </a>
-                  </div>
-                  <Input
-                    id="login-password"
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Password</label>
+                  <input 
+                    type="password" 
+                    required
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
                     placeholder="••••••••"
-                    type="password"
-                    required
                     value={loginForm.password}
-                    onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                    className={inputClass}
+                    onChange={e => setLoginForm({...loginForm, password: e.target.value})}
                   />
                 </div>
-
-                <Button
-                  type="submit"
+                <button 
                   disabled={loading}
-                  className="w-full py-6 mt-2 bg-primary text-on-primary font-bold rounded-xl shadow-md shadow-primary/20 hover:bg-primary-container active:scale-[0.98] transition-all h-auto"
+                  className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 transition-all shadow-sm shadow-blue-100 mt-2 disabled:opacity-50"
                 >
-                  {loading ? 'Signing in…' : 'Sign In →'}
-                </Button>
+                  {loading ? 'Processing...' : 'Sign In'}
+                </button>
               </form>
-            )}
-
-            {/* ── REGISTER FORM ── */}
-            {mode === 'register' && (
-              <form className="space-y-5" onSubmit={handleRegister}>
-                <div className="flex flex-col gap-2">
-                  <label className="font-label-uppercase text-label-uppercase text-on-surface-variant uppercase tracking-wider" htmlFor="reg-email">
-                    Work Email
-                  </label>
-                  <Input
-                    id="reg-email"
-                    placeholder="recruiter@company.ai"
-                    type="email"
+            ) : (
+              <form onSubmit={handleRegister} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Work Email</label>
+                  <input 
+                    type="email" 
                     required
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                    placeholder="name@company.com"
                     value={registerForm.email}
-                    onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
-                    className={inputClass}
+                    onChange={e => setRegisterForm({...registerForm, email: e.target.value})}
                   />
                 </div>
-
-                <div className="flex flex-col gap-2">
-                  <label className="font-label-uppercase text-label-uppercase text-on-surface-variant uppercase tracking-wider" htmlFor="reg-password">
-                    Create Password
-                  </label>
-                  <Input
-                    id="reg-password"
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Password</label>
+                  <input 
+                    type="password" 
+                    required
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
                     placeholder="Min. 8 characters"
-                    type="password"
-                    required
                     value={registerForm.password}
-                    onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
-                    className={inputClass}
+                    onChange={e => setRegisterForm({...registerForm, password: e.target.value})}
                   />
                 </div>
-
-                <div className="flex flex-col gap-2">
-                  <label className="font-label-uppercase text-label-uppercase text-on-surface-variant uppercase tracking-wider" htmlFor="reg-confirm">
-                    Confirm Password
-                  </label>
-                  <Input
-                    id="reg-confirm"
-                    placeholder="Re-enter password"
-                    type="password"
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Confirm Password</label>
+                  <input 
+                    type="password" 
                     required
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                    placeholder="Re-enter password"
                     value={registerForm.confirm}
-                    onChange={(e) => setRegisterForm({ ...registerForm, confirm: e.target.value })}
-                    className={inputClass}
+                    onChange={e => setRegisterForm({...registerForm, confirm: e.target.value})}
                   />
                 </div>
-
-                <Button
-                  type="submit"
+                <button 
                   disabled={loading}
-                  className="w-full py-6 mt-2 bg-primary text-on-primary font-bold rounded-xl shadow-md shadow-primary/20 hover:bg-primary-container active:scale-[0.98] transition-all h-auto"
+                  className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 transition-all shadow-sm shadow-blue-100 mt-2 disabled:opacity-50"
                 >
-                  {loading ? 'Submitting…' : 'Submit Access Request →'}
-                </Button>
-
-                <p className="text-center text-xs text-on-surface-variant pt-1">
-                  Already have an account?{' '}
-                  <button type="button" onClick={() => switchMode('login')} className="text-primary font-semibold hover:underline">
-                    Sign in here
-                  </button>
-                </p>
+                  {loading ? 'Processing...' : 'Request Access'}
+                </button>
               </form>
             )}
-          </CardContent>
-        </Card>
-      </main>
+          </div>
+        </div>
 
-      {/* Background Decoration */}
-      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[10%] -left-[10%] w-1/2 h-1/2 bg-primary-fixed-dim/30 blur-[150px] rounded-full" />
-        <div className="absolute -bottom-[10%] -right-[10%] w-1/2 h-1/2 bg-tertiary-fixed-dim/20 blur-[150px] rounded-full" />
+        <p className="text-center text-xs text-gray-400 mt-8">
+          By signing in, you agree to our <span className="underline cursor-pointer">Terms of Service</span>
+        </p>
+
       </div>
     </div>
   );

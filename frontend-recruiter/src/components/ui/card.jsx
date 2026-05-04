@@ -34,81 +34,67 @@ function CardHeader({
   );
 }
 
-function CardTitle({
-  className,
-  ...props
-}) {
-  return (
-    <div
-      data-slot="card-title"
-      className={cn(
-        "font-heading text-base leading-snug font-medium group-data-[size=sm]/card:text-sm",
-        className
-      )}
-      {...props} />
-  );
-}
+const Card = React.forwardRef(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn(
+      "rounded-xl border border-gray-200 bg-white text-gray-950 shadow-sm",
+      className
+    )}
+    {...props}
+  />
+))
+Card.displayName = "Card"
 
-function CardDescription({
-  className,
-  ...props
-}) {
-  return (
-    <div
-      data-slot="card-description"
-      className={cn("text-sm text-muted-foreground", className)}
-      {...props} />
-  );
-}
+const CardHeader = React.forwardRef(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("flex flex-col space-y-1.5 p-6", className)}
+    {...props}
+  />
+))
+CardHeader.displayName = "CardHeader"
 
-function CardAction({
-  className,
-  ...props
-}) {
-  return (
-    <div
-      data-slot="card-action"
-      className={cn(
-        "col-start-2 row-span-2 row-start-1 self-start justify-self-end",
-        className
-      )}
-      {...props} />
-  );
-}
+const CardTitle = React.forwardRef(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn(
+      "text-2xl font-semibold leading-none tracking-tight",
+      className
+    )}
+    {...props}
+  />
+))
+CardTitle.displayName = "CardTitle"
 
-function CardContent({
-  className,
-  ...props
-}) {
-  return (
-    <div
-      data-slot="card-content"
-      className={cn("px-4 group-data-[size=sm]/card:px-3", className)}
-      {...props} />
-  );
-}
+const CardDescription = React.forwardRef(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("text-sm text-gray-500", className)}
+    {...props}
+  />
+))
+CardDescription.displayName = "CardDescription"
 
-function CardFooter({
-  className,
-  ...props
-}) {
-  return (
-    <div
-      data-slot="card-footer"
-      className={cn(
-        "flex items-center rounded-b-xl border-t bg-muted/50 p-4 group-data-[size=sm]/card:p-3",
-        className
-      )}
-      {...props} />
-  );
-}
+const CardContent = React.forwardRef(({ className, ...props }, ref) => (
+  <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
+))
+CardContent.displayName = "CardContent"
+
+const CardFooter = React.forwardRef(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("flex items-center p-6 pt-0", className)}
+    {...props}
+  />
+))
+CardFooter.displayName = "CardFooter"
 
 export {
   Card,
   CardHeader,
   CardFooter,
   CardTitle,
-  CardAction,
   CardDescription,
   CardContent,
 }
