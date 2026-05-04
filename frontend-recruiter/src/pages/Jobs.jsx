@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import UploadBox from '@/components/common/UploadBox';
 import CandidateCard from '@/components/common/CandidateCard';
 import { Card } from '@/components/ui/card';
-const API_BASE = 'http://127.0.0.1:8000/api/v1';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
 
 export default function Jobs() {

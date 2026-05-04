@@ -3,7 +3,7 @@ Django settings for core project.
 """
 
 from pathlib import Path
-from decouple import Config, RepositoryEnv
+from decouple import AutoConfig
 import os
 import dj_database_url
 
@@ -11,9 +11,8 @@ import dj_database_url
 # BASE_DIR is backend/
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# Read .env from the root project directory
-env_file = BASE_DIR.parent / '.env'
-config = Config(RepositoryEnv(str(env_file))) if env_file.exists() else Config(RepositoryEnv(str(BASE_DIR / '.env')))
+# Read .env from the root project directory automatically
+config = AutoConfig(search_path=str(BASE_DIR.parent))
 
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-default-key')
 DEBUG = config('DEBUG', default=True, cast=bool)
