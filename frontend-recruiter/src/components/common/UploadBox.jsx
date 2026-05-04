@@ -21,34 +21,14 @@ export default function UploadBox({ icon, title, description, onFileSelect, load
   };
 
   return (
-    <Card 
-      onClick={handleClick}
-      className={`bg-white border-slate-200 rounded-xl p-6 shadow-sm flex flex-col items-center justify-center border-dashed border-2 bg-slate-50/30 group hover:border-primary/40 transition-colors cursor-pointer ${
-        success ? 'border-green-400 bg-green-50/20' : ''
-      }`}
-    >
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        className="hidden"
-        accept=".pdf,.docx"
-      />
-      <div className={`w-12 h-12 bg-white rounded-full flex items-center justify-center border border-slate-200 shadow-sm mb-4 group-hover:text-primary transition-colors ${
-        success ? 'text-green-600 border-green-200' : ''
-      }`}>
-        <span className="material-symbols-outlined">{success ? 'check_circle' : icon}</span>
+    <Card className="bg-white border-slate-200 rounded-xl p-6 shadow-sm flex flex-col items-center justify-center border-dashed border-2 bg-slate-50/30 group hover:border-primary/40 transition-colors cursor-pointer">
+      <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center border border-slate-200 shadow-sm mb-4 group-hover:text-primary transition-colors">
+        <span className="material-symbols-outlined">{icon}</span>
       </div>
-      <h3 className="font-semibold text-slate-900 mb-1">{success ? 'File Selected' : title}</h3>
-      <p className="text-body-sm text-slate-500 text-center mb-4 truncate max-w-full px-2">
-        {success ? success : description}
-      </p>
-      <Button 
-        variant={success ? "secondary" : "outline"}
-        disabled={loading}
-        className="bg-white border-slate-200 hover:bg-slate-50 pointer-events-none"
-      >
-        {loading ? 'Uploading...' : success ? 'Change File' : 'Choose File'}
+      <h3 className="font-semibold text-slate-900 mb-1">{title}</h3>
+      <p className="text-body-sm text-slate-500 text-center mb-4">{description}</p>
+      <Button variant="outline" className="bg-white border-slate-200 hover:bg-slate-50">
+        Choose File
       </Button>
     </Card>
   );

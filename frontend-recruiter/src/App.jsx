@@ -6,6 +6,8 @@ import Jobs from './pages/Jobs';
 import Reports from './pages/Reports';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import ReportDetail from './pages/ReportDetail';
+import Profile from './pages/Profile';
+import Settings from './pages/Settings';
 
 function App() {
   return (
@@ -19,6 +21,8 @@ function App() {
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/report/:id" element={<ReportDetail />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/settings" element={<Settings />} />
           </Route>
         </Route>
       </Routes>
