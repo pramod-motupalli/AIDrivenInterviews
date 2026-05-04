@@ -61,6 +61,13 @@ class RecruiterProxyAdmin(CommonUserAdmin):
     def get_queryset(self, request):
         return super().get_queryset(request).filter(role='recruiter')
 
+    def save_model(self, request, obj, form, change):
+        if change:
+            # Check if the user is being approved for the first time via the edit form
+            if not form.initial.get('is_approved') and obj.is_approved:
+                send_approval_email(obj)
+        super().save_model(request, obj, form, change)
+
 @admin.register(CandidateProxy)
 class CandidateProxyAdmin(CommonUserAdmin):
     def get_queryset(self, request):

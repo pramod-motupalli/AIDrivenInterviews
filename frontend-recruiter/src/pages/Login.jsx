@@ -20,7 +20,10 @@ export default function Login() {
       const res = await fetch(`${API_BASE}/login/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: loginForm.email, password: loginForm.password }),
+        body: JSON.stringify({ 
+          email: loginForm.email.trim().toLowerCase(), 
+          password: loginForm.password 
+        }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -54,13 +57,33 @@ export default function Login() {
       const res = await fetch(`${API_BASE}/register/recruiter/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: registerForm.email, password: registerForm.password }),
+        body: JSON.stringify({ 
+          email: registerForm.email.trim().toLowerCase(), 
+          password: registerForm.password 
+        }),
       });
       const data = await res.json();
       if (res.ok || res.status === 201) {
         setMessage({ type: 'success', text: 'Access request submitted successfully!' });
       } else {
-        setMessage({ type: 'error', text: data.detail || 'Registration failed.' });
+        // Handle validation errors from Django/DRF
+        let errorMsg = 'Registration failed.';
+        if (data) {
+          if (typeof data === 'object') {
+            // Extract the first error message from the object
+            const firstKey = Object.keys(data)[0];
+            const firstError = data[firstKey];
+            errorMsg = Array.isArray(firstError) ? firstError[0] : (data.detail || errorMsg);
+            
+            // Special case for email uniqueness
+            if (firstKey === 'email' && errorMsg.includes('exists')) {
+              errorMsg = 'This email is already registered.';
+            }
+          } else if (data.detail) {
+            errorMsg = data.detail;
+          }
+        }
+        setMessage({ type: 'error', text: errorMsg });
       }
     } catch {
       setMessage({ type: 'error', text: 'Server connection error.' });
