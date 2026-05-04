@@ -41,14 +41,6 @@ export default function Sidebar() {
         </NavLink>
       </nav>
 
-      {/* Bottom Section */}
-      <div className="p-4 border-t border-gray-100">
-        <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-gray-600 border border-gray-200 hover:bg-gray-50 hover:text-gray-900 transition-all duration-200 text-sm font-medium">
-          <span className="material-symbols-outlined text-[20px]">logout</span>
-          <span>Log Out</span>
-        </button>
-      </div>
-
     </aside>
   );
 }

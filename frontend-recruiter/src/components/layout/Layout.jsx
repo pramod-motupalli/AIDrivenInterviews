@@ -8,6 +8,7 @@ export default function Layout() {
     <div className="bg-background text-foreground h-full w-full flex overflow-hidden">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        <Header />
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-6">
           <div className="max-w-7xl mx-auto w-full">
             <Outlet />

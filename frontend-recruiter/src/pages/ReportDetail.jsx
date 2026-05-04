@@ -11,10 +11,16 @@ export default function ReportDetail() {
   ];
 
   return (
-    <div className="space-y-6">
-      
+    <div className="flex flex-col">
+      {/* Breadcrumbs */}
+      <nav className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+        <Link to="/reports" className="hover:text-blue-600 transition-colors">Reports</Link>
+        <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+        <span className="text-gray-900 font-medium">Candidate Report</span>
+      </nav>
+
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-4">
         <div className="flex items-center gap-4">
           <Link to="/reports" className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-900 hover:border-gray-300 transition-all">
             <span className="material-symbols-outlined">arrow_back</span>
@@ -41,8 +47,9 @@ export default function ReportDetail() {
         </div>
       </div>
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="space-y-6">
+        {/* Main Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* AI Summary Card */}
         <div className="lg:col-span-8 bg-white rounded-xl border border-gray-200 p-6 shadow-sm flex flex-col gap-4">
@@ -147,5 +154,6 @@ export default function ReportDetail() {
       </div>
 
     </div>
+  </div>
   );
 }
