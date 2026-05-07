@@ -10,6 +10,7 @@ urlpatterns = [
     path('api/v1/health/', HealthCheckView.as_view(), name='health_check'),
     path('api/v1/upload/', FileUploadView.as_view(), name='file_upload'),
     path('api/v1/interviews/', include('interviews.urls')),
+    path('api/v1/ai/', include('ai_engine.urls')),
 ]
 
 if settings.DEBUG:

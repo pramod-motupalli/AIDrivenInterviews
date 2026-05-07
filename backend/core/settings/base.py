@@ -76,8 +76,12 @@ ASGI_APPLICATION = 'core.asgi.application'
 
 DATABASE_URL = config('DATABASE_URL', default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
 DATABASES = {
-    'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600, conn_health_checks=True)
+    'default': dj_database_url.parse(DATABASE_URL)
 }
+
+# Ensure cockroachdb uses the correct engine
+if DATABASE_URL.startswith('cockroach://'):
+    DATABASES['default']['ENGINE'] = 'django_cockroachdb'
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -117,6 +121,16 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 10,
 }
 
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': False,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
 # AWS S3 Configuration
 AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID', default='')
 AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY', default='')
@@ -142,8 +156,22 @@ DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@aiinterview.c
 
 # Frontend Configuration
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
+SESSION_LINK_EXPIRY_HOURS = config('SESSION_LINK_EXPIRY_HOURS', default=24, cast=int)
 
-CORS_ALLOW_ALL_ORIGINS = True  # For dev only
+# Supabase Configuration
+SUPABASE_URL = config('SUPABASE_URL', default='')
+SUPABASE_KEY = config('SUPABASE_KEY', default='')
+
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "authorization",
+    "content-type",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
 
 CHANNEL_LAYERS = {
     "default": {

@@ -1,0 +1,313 @@
+[
+{
+  "model": "users.user",
+  "pk": 1,
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$TgqSCo9yUjY22vYWpKoSj0$gYEPGhVyeuP6uQo/cBC3a4F7nDpIHqXr0IkMVnBYDRQ=",
+    "last_login": "2026-05-03T13:38:28.423Z",
+    "is_superuser": true,
+    "email": "admin@aiinterview.com",
+    "role": "admin",
+    "is_approved": true,
+    "is_first_login": true,
+    "created_at": "2026-05-02T11:41:28.755Z",
+    "is_active": true,
+    "is_staff": true,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "pk": 2,
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$0wy87LdToyEuydTKx8IQmP$QA7cGpbUN7clkOrT0EKX7kZbSI6hRRsmjOMdQK5ARRw=",
+    "last_login": null,
+    "is_superuser": false,
+    "email": "abhishek123@gmail.com",
+    "role": "recruiter",
+    "is_approved": true,
+    "is_first_login": true,
+    "created_at": "2026-05-02T12:03:45.489Z",
+    "is_active": true,
+    "is_staff": true,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "pk": 3,
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$6UeKiCHfbjlPQ8Sfo3DY76$xm+omYTMChf80+QHkqeWTosCeaRN+EsuP2gtQ+UeeaQ=",
+    "last_login": null,
+    "is_superuser": false,
+    "email": "manisha@gmail.com",
+    "role": "recruiter",
+    "is_approved": true,
+    "is_first_login": true,
+    "created_at": "2026-05-02T12:11:29.774Z",
+    "is_active": true,
+    "is_staff": true,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "pk": 4,
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$lCinqkxhqhKnWEPlXHQFkG$LC4mnczth9Oq51pOUwByHI70eahwJz0zcLjnfEok5V8=",
+    "last_login": null,
+    "is_superuser": false,
+    "email": "vinay@gmail.com",
+    "role": "recruiter",
+    "is_approved": false,
+    "is_first_login": true,
+    "created_at": "2026-05-02T12:36:26.054Z",
+    "is_active": true,
+    "is_staff": false,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "pk": 6,
+  "fields": {
+    "password": "pbkdf2_sha256$600000$6PWMa9zwRHwJbktLKSewHA$oBplr+p1jacVe75+0HFRmQ58B9FbGjEuLwacjToYW4w=",
+    "last_login": "2026-05-05T08:35:59.111Z",
+    "is_superuser": true,
+    "email": "abhishek100207@gmail.com",
+    "role": "admin",
+    "is_approved": true,
+    "is_first_login": true,
+    "created_at": "2026-05-03T10:34:00.077Z",
+    "is_active": true,
+    "is_staff": true,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "pk": 8,
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$JIvLAKdQmIsd2TYpWIqsPo$dkAb2lWVE0SdxBTvq3clqbKdUb9kKtVAsTAarS1cWOA=",
+    "last_login": null,
+    "is_superuser": false,
+    "email": "subhashch22012004@gmail.com",
+    "role": "recruiter",
+    "is_approved": true,
+    "is_first_login": true,
+    "created_at": "2026-05-03T10:44:48.464Z",
+    "is_active": true,
+    "is_staff": false,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "pk": 10,
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$r0sQa0Mzkewnhypprzvh5h$hwpaHU6drjaaWiiBXTbEvu9PUhasSIQSi04aYit477U=",
+    "last_login": "2026-05-07T11:45:09.118Z",
+    "is_superuser": true,
+    "email": "v@gmail.com",
+    "role": "admin",
+    "is_approved": true,
+    "is_first_login": true,
+    "created_at": "2026-05-03T14:00:58.050Z",
+    "is_active": true,
+    "is_staff": true,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "pk": 11,
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$ifeZdgQSgn77bei5xcIYca$rR/UNOEK9BbkugVQUaVC65GsjeXQquWnKzyhRIHcdzQ=",
+    "last_login": null,
+    "is_superuser": false,
+    "email": "ejdf@gmail.com",
+    "role": "recruiter",
+    "is_approved": false,
+    "is_first_login": true,
+    "created_at": "2026-05-03T14:18:53.634Z",
+    "is_active": true,
+    "is_staff": false,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "pk": 17,
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$xcbS8RtdSHPkQ0LVYh1Hpj$PlpMFAbE8oWqlDLEkkSuhNYpDiNctmWtuekc+b/AW+4=",
+    "last_login": null,
+    "is_superuser": false,
+    "email": "vinay1@gmail.com",
+    "role": "recruiter",
+    "is_approved": true,
+    "is_first_login": true,
+    "created_at": "2026-05-04T09:20:09.547Z",
+    "is_active": true,
+    "is_staff": true,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "pk": 18,
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$FARnZr4PA4DSfW9k56Nwoq$s+/du+Lm5al8wuyLIOHm3+B/5Z3SvsyQb8C8Pn/ezNA=",
+    "last_login": null,
+    "is_superuser": false,
+    "email": "chspabhisubbu@gmail.com",
+    "role": "recruiter",
+    "is_approved": true,
+    "is_first_login": true,
+    "created_at": "2026-05-04T09:37:52.490Z",
+    "is_active": true,
+    "is_staff": true,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "pk": 22,
+  "fields": {
+    "password": "pbkdf2_sha256$600000$70odz5pFwCESLimbVACzhL$0FsNh47rCBCJOEOAeCXSlk/gcprEBanpWHMi6I6tRy4=",
+    "last_login": null,
+    "is_superuser": false,
+    "email": "velmalaanjalivelmala@gmail.com",
+    "role": "recruiter",
+    "is_approved": true,
+    "is_first_login": true,
+    "created_at": "2026-05-04T16:29:21.917Z",
+    "is_active": true,
+    "is_staff": true,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "pk": 23,
+  "fields": {
+    "password": "pbkdf2_sha256$600000$zCl13dx70KNjGGFPzKBDeN$1A3VvcZuYhqS1VCONhGuKa4i+UZiq6CdbjWZIFZ4W8c=",
+    "last_login": null,
+    "is_superuser": false,
+    "email": "madhavimacha47@gmail.com",
+    "role": "recruiter",
+    "is_approved": true,
+    "is_first_login": true,
+    "created_at": "2026-05-05T03:48:46.033Z",
+    "is_active": true,
+    "is_staff": true,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "pk": 24,
+  "fields": {
+    "password": "pbkdf2_sha256$600000$76TX5lH2SLTL3TfoUsqE5r$Q3rYq+mcQTWYMMFP6bYcy0jER/aFIfFeMSGcshjkqw8=",
+    "last_login": null,
+    "is_superuser": false,
+    "email": "madhavimacha03@gmail.com",
+    "role": "recruiter",
+    "is_approved": true,
+    "is_first_login": true,
+    "created_at": "2026-05-05T08:35:20.292Z",
+    "is_active": true,
+    "is_staff": true,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "pk": 29,
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$WXWmMLvWeTrjPRJUpfK8AW$Nm8GpLFac7WVQY65FQfvlUDNUBhrBkYoAx8tXId3KdY=",
+    "last_login": null,
+    "is_superuser": false,
+    "email": "test@recruiter.com",
+    "role": "recruiter",
+    "is_approved": false,
+    "is_first_login": true,
+    "created_at": "2026-05-07T11:45:09.590Z",
+    "is_active": true,
+    "is_staff": false,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "pk": 30,
+  "fields": {
+    "password": "",
+    "last_login": null,
+    "is_superuser": false,
+    "email": "beesaboinavinay@gmail.com",
+    "role": "candidate",
+    "is_approved": false,
+    "is_first_login": true,
+    "created_at": "2026-05-07T11:47:57.181Z",
+    "is_active": true,
+    "is_staff": false,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "jobs.job",
+  "pk": 1,
+  "fields": {
+    "recruiter": 10,
+    "title": "AI/ML Engineer Intern",
+    "description": "Auto-created from screening for AI/ML Engineer Intern",
+    "status": "draft",
+    "created_at": "2026-05-06T11:51:55.848Z"
+  }
+},
+{
+  "model": "interviews.interview",
+  "pk": 1,
+  "fields": {
+    "job": 1,
+    "candidate": 30,
+    "session_token": "3d6087d0-bb01-4c9d-b676-56a4c4918f84",
+    "link1": "http://localhost:5173/interview/3d6087d0-bb01-4c9d-b676-56a4c4918f84",
+    "link2": "",
+    "link1_expiry": "2026-05-08T11:53:19.474Z",
+    "status": "pending",
+    "question_bank": [],
+    "created_at": "2026-05-07T11:53:19.476Z"
+  }
+},
+{
+  "model": "interviews.interview",
+  "pk": 2,
+  "fields": {
+    "job": 1,
+    "candidate": 30,
+    "session_token": "fa6d2fe2-dae4-4262-9f95-29f4f0d6b66c",
+    "link1": "http://localhost:5174/interview/fa6d2fe2-dae4-4262-9f95-29f4f0d6b66c",
+    "link2": "",
+    "link1_expiry": "2026-05-08T11:58:19.491Z",
+    "status": "pending",
+    "question_bank": [],
+    "created_at": "2026-05-07T11:58:19.491Z"
+  }
+}
+]
