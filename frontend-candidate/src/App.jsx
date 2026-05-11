@@ -8,7 +8,7 @@ import FeedbackMain from './pages/FeedbackMain'
 import DashboardUnderReview from './pages/DashboardUnderReview'
 import AIAssistance from './pages/AIAssistance'
 import Settings from './pages/Settings'
-import CandidateLogin from './pages/CandidateLogin'
+import SessionValidation from './pages/SessionValidation'
 import ProtectedRoute from './components/ProtectedRoute'
 import './index.css'
 
@@ -16,7 +16,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<CandidateLogin />} />
+        <Route path="/interview/:token" element={<SessionValidation />} />
         
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<Dashboard />} />

@@ -60,3 +60,17 @@ def send_new_recruiter_notification(user):
         },
         recipient_list=[settings.DEFAULT_FROM_EMAIL]
     )
+
+def send_candidate_welcome_email(user, password):
+    """Send welcome email to a candidate with their login credentials."""
+    send_html_email(
+        subject="🚀 Your AI Interview Invitation",
+        template_name="emails/candidate_welcome.html",
+        context={
+            'name': user.email,
+            'email': user.email,
+            'password': password,
+            'login_url': f"{settings.FRONTEND_URL}/",
+        },
+        recipient_list=[user.email]
+    )

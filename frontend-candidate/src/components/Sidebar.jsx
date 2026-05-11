@@ -81,16 +81,6 @@ const Sidebar = () => {
         </nav>
       </div>
 
-      {/* Bottom Actions */}
-      <div className="mt-auto p-6 border-t border-slate-100">
-        <button 
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-3 w-full text-[#EF4444] hover:bg-red-50 rounded-lg transition-colors font-medium"
-        >
-          <LogOut size={20} />
-          <span>Logout</span>
-        </button>
-      </div>
     </aside>
   );
 };

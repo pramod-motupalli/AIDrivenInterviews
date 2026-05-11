@@ -23,6 +23,8 @@ class Interview(models.Model):
     link1_expiry = models.DateTimeField(null=True, blank=True)
     
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    candidate_name = models.CharField(max_length=255, blank=True)
+    ats_score = models.FloatField(null=True, blank=True)
     question_bank = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

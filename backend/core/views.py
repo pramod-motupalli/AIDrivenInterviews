@@ -14,6 +14,7 @@ class FileUploadView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
+        print(f"DEBUG: Auth header: {request.headers.get('Authorization')}")
         file_obj = request.FILES.get('file')
         if not file_obj:
             return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
@@ -27,7 +28,20 @@ class FileUploadView(APIView):
         if not any(file_obj.name.lower().endswith(ext) for ext in allowed_extensions):
             return Response({'error': 'Only PDF and DOCX files are allowed'}, status=status.HTTP_400_BAD_REQUEST)
 
-        file_path = default_storage.save(f'uploads/{file_obj.name}', file_obj)
+        # Organize by type
+        file_type = request.data.get('type', 'uploads')
+        if file_type not in ['resume', 'jd']:
+            file_type = 'uploads'
+        
+        # Add plural 's' for folder name if it's resume/jd
+        folder = f"{file_type}s" if file_type in ['resume', 'jd'] else file_type
+        
+        file_path = default_storage.save(f'{folder}/{file_obj.name}', file_obj)
         file_url = default_storage.url(file_path)
 
-        return Response({'url': file_url}, status=status.HTTP_201_CREATED)
+        return Response({
+            'url': file_url,
+            'path': file_path,
+            'name': file_obj.name,
+            'type': file_type
+        }, status=status.HTTP_201_CREATED)
