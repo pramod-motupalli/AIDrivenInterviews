@@ -1,7 +1,17 @@
 import os
-from supabase import create_client, Client
 from django.conf import settings
 import uuid
+
+try:
+    from supabase import create_client, Client
+    SUPABASE_AVAILABLE = True
+except ImportError:
+    SUPABASE_AVAILABLE = False
+    print("WARNING: Supabase package not found. Using mock for local development.")
+    def create_client(url, key):
+        return None
+    class Client:
+        pass
 
 class SupabaseService:
     def __init__(self):
@@ -9,7 +19,13 @@ class SupabaseService:
         self.key = getattr(settings, "SUPABASE_KEY", None)
         if not self.url or not self.key:
             raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in Django settings")
-        self.client: Client = create_client(self.url, self.key)
+        
+        if SUPABASE_AVAILABLE:
+            self.client: Client = create_client(self.url, self.key)
+        else:
+            self.client = None
+            if "dummy.supabase.co" not in self.url:
+                raise ValueError("Supabase package is missing and cannot connect to real Supabase instance.")
 
     def upload_file(self, file_obj, bucket_name: str, remote_path: str):
         """
