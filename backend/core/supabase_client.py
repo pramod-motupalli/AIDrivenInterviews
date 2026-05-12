@@ -16,6 +16,10 @@ class SupabaseService:
         Uploads a file object to Supabase Storage.
         Returns the public URL of the uploaded file.
         """
+        if "dummy.supabase.co" in self.url:
+            print("DEBUG: Bypassing Supabase upload (dummy credentials detected).")
+            return f"{self.url}/storage/v1/object/public/{bucket_name}/{remote_path}"
+
         # Ensure the bucket exists or is handled
         # Note: bucket creation is usually done manually, but we try to upload
         
@@ -44,6 +48,10 @@ class SupabaseService:
         """
         Saves screening metadata to the 'screenings' table.
         """
+        if "dummy.supabase.co" in self.url:
+            print("DEBUG: Bypassing Supabase DB insert (dummy credentials detected).")
+            return {"id": "dummy-id", **data}
+
         response = self.client.table("screenings").insert(data).execute()
         return response.data
 

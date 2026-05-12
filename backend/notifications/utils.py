@@ -12,15 +12,25 @@ def send_html_email(subject, template_name, context, recipient_list):
         to=recipient_list
     )
     email.attach_alternative(html_content, "text/html")
-    
-    # Synchronous MVP as requested (using a simple thread to avoid blocking response)
+
+    # Always print credentials to server log as a fallback
+    if 'temp_password' in context and context['temp_password']:
+        print(f"\n{'='*60}")
+        print(f"[EMAIL DEBUG] Sending invite to: {recipient_list}")
+        print(f"[EMAIL DEBUG] Subject: {subject}")
+        print(f"[EMAIL DEBUG] Candidate Email: {context.get('email')}")
+        print(f"[EMAIL DEBUG] Temp Password:   {context['temp_password']}")
+        print(f"[EMAIL DEBUG] Invite Link:     {context.get('invite_link', 'N/A')}")
+        print(f"{'='*60}\n")
+
     class EmailThread(threading.Thread):
         def run(self):
             try:
                 email.send()
+                print(f"[EMAIL] Successfully sent '{subject}' to {recipient_list}")
             except Exception as e:
-                print(f"Failed to send email: {e}")
-                
+                print(f"[EMAIL ERROR] Failed to send '{subject}' to {recipient_list}: {e}")
+
     EmailThread().start()
 
 def send_approval_email(user):

@@ -79,3 +79,21 @@ class RecruiterViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return User.objects.filter(role='recruiter')
+
+class FirstLoginPasswordResetView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        if not user.is_first_login:
+            return Response({"error": "Password has already been reset."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        new_password = request.data.get('new_password')
+        if not new_password:
+            return Response({"error": "New password is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.set_password(new_password)
+        user.is_first_login = False
+        user.save()
+
+        return Response({"message": "Password updated successfully."}, status=status.HTTP_200_OK)

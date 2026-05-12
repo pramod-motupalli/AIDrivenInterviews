@@ -24,10 +24,10 @@ const Sidebar = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('access');
-    localStorage.removeItem('refresh');
-    localStorage.removeItem('role');
-    navigate('/login');
+    localStorage.removeItem('candidate_token');
+    localStorage.removeItem('candidate_name');
+    localStorage.removeItem('job_title');
+    navigate('/');
   };
 
   return (

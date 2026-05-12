@@ -4,7 +4,8 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     CustomTokenObtainPairView, RecruiterRegisterView,
     AdminApproveRecruiterView, AdminRejectRecruiterView,
-    PendingRecruitersView, CandidateViewSet, RecruiterViewSet
+    PendingRecruitersView, CandidateViewSet, RecruiterViewSet,
+    FirstLoginPasswordResetView
 )
 
 urlpatterns = [
@@ -14,6 +15,7 @@ urlpatterns = [
     path('admin/pending/', PendingRecruitersView.as_view(), name='pending_recruiters'),
     path('admin/approve/<int:pk>/', AdminApproveRecruiterView.as_view(), name='approve_recruiter'),
     path('admin/reject/<int:pk>/', AdminRejectRecruiterView.as_view(), name='reject_recruiter'),
+    path('password-reset/first-login/', FirstLoginPasswordResetView.as_view(), name='first_login_password_reset'),
 ]
 
 router = DefaultRouter()

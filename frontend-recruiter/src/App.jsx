@@ -8,11 +8,14 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import ReportDetail from './pages/ReportDetail';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
+import CandidateInterview from './pages/CandidateInterview';
 
 function App() {
   return (
     <Router>
       <Routes>
+        {/* Public candidate interview route – no auth wrapper */}
+        <Route path="/interview/:token" element={<CandidateInterview />} />
         <Route path="/" element={<Login />} />
         
         <Route element={<ProtectedRoute />}>
