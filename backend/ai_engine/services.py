@@ -11,7 +11,7 @@ class GroqAIService:
 
     def __init__(self):
         self.client = Groq(api_key=config('GROQ_API_KEY'))
-        self.model = config('GROQ_MODEL', default='llama3-70b-8192')
+        self.model = config('GROQ_MODEL', default='llama-3.3-70b-versatile')
 
     # ------------------------------------------------------------------ #
     # Internal helpers

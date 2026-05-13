@@ -47,6 +47,7 @@ We are using **Neon.tech** for the database. You will need to get the `DATABASE_
     *   `SECRET_KEY`: Generate one or ask team lead.
     *   `DATABASE_URL`: Your Neon connection string.
     *   `GEMINI_API_KEY`: Your Google Gemini API key.
+    *   `GROQ_API_KEY`: Your Groq API key.
     *   `EMAIL_HOST_USER`: Your Gmail address.
     *   `EMAIL_HOST_PASSWORD`: Your 16-character **Gmail App Password**.
 
