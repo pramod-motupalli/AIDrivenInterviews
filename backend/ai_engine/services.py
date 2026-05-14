@@ -99,18 +99,18 @@ Return ONLY a valid JSON object with this structure:
         Evaluates a candidate's answer and returns scoring dimensions.
         """
         prompt = f"""
-You are an expert technical interviewer.
-Evaluate the candidate's answer to the following interview question.
+You are a Senior Talent Acquisition Lead conducting a rigorous technical interview.
+Evaluate the candidate's answer to the following technical question.
 
 Question: {question_text}
 Candidate's Answer: {answer_text}
 
 Score the answer from 0 to 100 on three dimensions:
-1. Relevance  – does it directly address the question?
-2. Accuracy   – is the technical/factual content correct?
-3. Clarity    – is it well-structured and easy to understand?
+1. Relevance  – does it directly address the technical core of the question?
+2. Accuracy   – is the technical/factual content precise and correct?
+3. Clarity    – is the explanation professional, well-structured, and easy to follow?
 
-Also provide a single overall score (0-100) and one sentence of brief feedback.
+Also provide a single overall score (0-100) and one sentence of brief, professional feedback as a senior interviewer.
 
 Return ONLY a JSON object with this exact structure:
 {{
@@ -118,7 +118,7 @@ Return ONLY a JSON object with this exact structure:
     "accuracy_score": 90,
     "clarity_score": 80,
     "overall_score": 85,
-    "feedback": "Brief feedback here."
+    "feedback": "Professional feedback here."
 }}
 """
         try:
@@ -135,52 +135,54 @@ Return ONLY a JSON object with this exact structure:
 
     def generate_next_question(self, interview, previous_answer=None, previous_score=None) -> str:
         """
-        Generates the next interview question dynamically.
-        Adjusts difficulty based on the candidate's previous score.
+        Generates the next technical interview question dynamically.
+        Adjusts difficulty based on the candidate's previous performance.
         """
         jd_text = interview.job.description if interview.job else "No job description provided."
         resume_text = interview.resume_text if interview.resume_text else "No resume provided."
 
         # Difficulty logic
         if previous_score is None:
-            difficulty_instruction = "Ask an opening medium-difficulty question to assess the candidate's foundational knowledge."
+            difficulty_instruction = "As a Senior TA, ask an opening high-level technical question to assess their foundational expertise in the role."
         elif previous_score > 80:
             difficulty_instruction = (
-                "The candidate answered excellently. Ask a significantly harder, "
-                "advanced deep-dive question to probe their expert-level understanding."
+                "The candidate provided a strong technical answer. As a Senior TA, challenge them with a "
+                "complex, architectural, or scenario-based deep-dive question to probe the limits of their expertise."
             )
         elif previous_score < 50:
             difficulty_instruction = (
-                "The candidate struggled. Ask a simpler, more foundational question "
-                "to help them demonstrate their baseline knowledge."
+                "The candidate struggled with the technical details. As a Senior TA, ask a more direct, "
+                "fundamental technical question to see if they have a solid grasp of the basics."
             )
         else:
-            difficulty_instruction = "Ask a medium-difficulty question relevant to their role and experience."
+            difficulty_instruction = "Ask a challenging technical question that bridges their experience with the job requirements."
 
         prompt = f"""
-You are an expert technical interviewer conducting a job interview.
+You are a Senior Talent Acquisition Lead conducting a professional technical interview.
 
 Context:
-- Job Description (excerpt): {jd_text[:800]}
-- Candidate Resume (excerpt): {resume_text[:800]}
+- Job Description: {jd_text[:1000]}
+- Candidate Resume: {resume_text[:1000]}
 
-Previous context:
-- Candidate's last answer: {previous_answer if previous_answer else "None – this is the very first question."}
-- Score on last answer: {previous_score if previous_score is not None else "N/A"}
+Previous Context:
+- Last Answer: {previous_answer if previous_answer else "None – starting the interview."}
+- Performance Score: {previous_score if previous_score is not None else "N/A"}
 
 Instruction:
 {difficulty_instruction}
 
 Rules:
-- Generate ONLY the question text. No preamble, no explanation, no numbering.
-- The question must be directly relevant to the candidate's background and the job role.
-- Do NOT repeat a question that has already been asked.
+1. Act as a Senior Talent Acquisition Lead.
+2. Ask ONLY one clear, professional technical question.
+3. The question must be based on their resume projects or the JD requirements.
+4. Return ONLY the question text. No preamble, no explanation.
 """
         try:
             return self._chat_text(prompt)
         except Exception as e:
             print(f"Groq Error (generate_next_question): {e}")
-            return "Can you walk me through a challenging project you've worked on and the impact it had?"
+            return "Can you explain the technical architecture of a complex project you've led recently?"
+
 
 
 # Backwards-compatible alias so existing imports keep working

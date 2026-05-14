@@ -8,14 +8,22 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import ReportDetail from './pages/ReportDetail';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
-import CandidateInterview from './pages/CandidateInterview';
+
+import React, { useEffect } from 'react';
+
+const RedirectToCandidate = () => {
+  useEffect(() => {
+    window.location.replace('http://localhost:5174' + window.location.pathname);
+  }, []);
+  return null;
+};
 
 function App() {
   return (
     <Router>
       <Routes>
-        {/* Public candidate interview route – no auth wrapper */}
-        <Route path="/interview/:token" element={<CandidateInterview />} />
+        {/* Redirect old session links to Candidate Portal */}
+        <Route path="/interview/:token" element={<RedirectToCandidate />} />
         <Route path="/" element={<Login />} />
         
         <Route element={<ProtectedRoute />}>

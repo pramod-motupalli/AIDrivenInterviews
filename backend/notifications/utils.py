@@ -36,7 +36,7 @@ def send_html_email(subject, template_name, context, recipient_list):
 def send_approval_email(user):
     """Send approval email to a recruiter whose account has been approved."""
     send_html_email(
-        subject="✅ Your recruiter account has been approved!",
+        subject="Your recruiter account has been approved!",
         template_name="emails/approval_email.html",
         context={
             'login_url': f"{settings.FRONTEND_URL}/login",
@@ -48,7 +48,7 @@ def send_approval_email(user):
 def send_rejection_email(user, reason=''):
     """Send rejection email to a recruiter whose account was rejected."""
     send_html_email(
-        subject="❌ Your recruiter account request was not approved",
+        subject="Your recruiter account request was not approved",
         template_name="emails/rejection_email.html",
         context={
             'email': user.email,
@@ -62,7 +62,7 @@ def send_new_recruiter_notification(user):
     admin_url = "http://localhost:8000/admin/users/user/" 
     
     send_html_email(
-        subject="🔔 New Recruiter Registration Awaiting Approval",
+        subject="New Recruiter Registration Awaiting Approval",
         template_name="emails/admin_new_recruiter.html",
         context={
             'recruiter_email': user.email,
@@ -74,13 +74,28 @@ def send_new_recruiter_notification(user):
 def send_candidate_welcome_email(user, password):
     """Send welcome email to a candidate with their login credentials."""
     send_html_email(
-        subject="🚀 Your AI Interview Invitation",
+        subject="Your AI Interview Invitation",
         template_name="emails/candidate_welcome.html",
         context={
             'name': user.email,
             'email': user.email,
             'password': password,
             'login_url': f"{settings.FRONTEND_URL}/",
+        },
+        recipient_list=[user.email]
+    )
+
+def send_candidate_completion_email(user, password):
+    """Send email to candidate when interview completes, giving them the portal login to view report."""
+    send_html_email(
+        subject="Interview Completed - View Your Results",
+        template_name="emails/candidate_completion.html",
+        context={
+            'name': user.email,
+            'email': user.email,
+            'password': password,
+            'login_url': f"{settings.CANDIDATE_FRONTEND_URL}/login",
+            'temp_password': password  # just to log it in server console
         },
         recipient_list=[user.email]
     )

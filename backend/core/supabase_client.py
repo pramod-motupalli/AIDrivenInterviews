@@ -71,4 +71,41 @@ class SupabaseService:
         response = self.client.table("screenings").insert(data).execute()
         return response.data
 
+    def upload_json_report(self, report_dict: dict, remote_path: str, bucket_name: str = "screening-documents"):
+        """
+        Uploads a JSON report as a .json file to Supabase Storage.
+        Returns the public URL of the uploaded file.
+        """
+        import json, io
+        if "dummy.supabase.co" in self.url:
+            print("DEBUG: Bypassing Supabase report upload (dummy credentials detected).")
+            return f"{self.url}/storage/v1/object/public/{bucket_name}/{remote_path}"
+
+        json_bytes = json.dumps(report_dict, indent=2, ensure_ascii=False).encode("utf-8")
+        file_obj = io.BytesIO(json_bytes)
+
+        self.client.storage.from_(bucket_name).upload(
+            path=remote_path,
+            file=file_obj.read(),
+            file_options={
+                "upsert": "true",
+                "content-type": "application/json"
+            }
+        )
+        public_url = self.client.storage.from_(bucket_name).get_public_url(remote_path)
+        return public_url
+
+    def update_screening_with_report(self, candidate_email: str, report_url: str):
+        """
+        Updates the screenings table row matching candidate_email with the report_url.
+        """
+        if "dummy.supabase.co" in self.url:
+            print("DEBUG: Bypassing Supabase DB update (dummy credentials detected).")
+            return
+
+        self.client.table("screenings") \
+            .update({"report_url": report_url}) \
+            .eq("candidate_email", candidate_email) \
+            .execute()
+
 supabase_service = SupabaseService()

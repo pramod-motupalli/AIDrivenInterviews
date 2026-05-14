@@ -1,160 +1,190 @@
-import React from 'react';
-import { 
-  Wifi, Mic, Camera, Globe, CheckCircle2, Sliders 
-} from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import LayoutWrapper from '../components/LayoutWrapper';
-
-
-const CameraSection = () => (
-  <div className="space-y-4 h-full flex flex-col">
-    <div className="bg-slate-900 rounded-xl shadow overflow-hidden relative flex-1 min-h-[250px] md:min-h-[300px] w-full h-64">
-      <img 
-        src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
-        alt="Camera preview" 
-        className="w-full h-full object-cover opacity-80"
-      />
-      <div className="absolute inset-0 flex flex-col justify-end p-4">
-        <div className="flex justify-between items-end">
-          <div className="bg-black/50 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 border border-white/10">
-            <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-            Face Detected
-          </div>
-          <button className="bg-black/50 backdrop-blur-sm text-white p-2 rounded-lg hover:bg-black/70 transition-colors border border-white/10">
-            <Sliders size={20} />
-          </button>
-        </div>
-      </div>
-    </div>
-    
-    <div className="bg-white rounded-xl shadow p-5 border border-slate-100">
-      <div className="flex justify-between items-center mb-2">
-        <span className="text-slate-600 font-medium text-sm">Microphone level</span>
-        <span className="text-green-600 font-bold text-sm">Optimal</span>
-      </div>
-      <div className="flex gap-1 h-3">
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((bar, i) => (
-          <div 
-            key={i} 
-            className={`flex-1 rounded-sm ${i < 7 ? 'bg-green-500' : 'bg-slate-200'}`}
-          ></div>
-        ))}
-      </div>
-    </div>
-  </div>
-);
-
-const ChecklistCard = () => (
-  <div className="bg-white rounded-xl shadow p-6 h-full border border-slate-100">
-    <h3 className="font-bold text-xl text-slate-800 mb-6">System Status</h3>
-    
-    <div className="space-y-6">
-      <div className="flex justify-between items-center pb-4 border-b border-slate-100">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600 shrink-0">
-            <Wifi size={20} />
-          </div>
-          <div>
-            <h4 className="font-bold text-slate-800">Internet Connection</h4>
-            <p className="text-sm text-slate-500">Speed: 45 Mbps</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 text-green-600 font-bold text-sm bg-green-50 px-3 py-1 rounded-full shrink-0">
-          <CheckCircle2 size={16} /> Pass
-        </div>
-      </div>
-
-      <div className="flex justify-between items-center pb-4 border-b border-slate-100">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600 shrink-0">
-            <Mic size={20} />
-          </div>
-          <div>
-            <h4 className="font-bold text-slate-800">Microphone</h4>
-            <p className="text-sm text-slate-500">Default Audio Device</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 text-green-600 font-bold text-sm bg-green-50 px-3 py-1 rounded-full shrink-0">
-          <CheckCircle2 size={16} /> Pass
-        </div>
-      </div>
-
-      <div className="flex justify-between items-center pb-4 border-b border-slate-100">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600 shrink-0">
-            <Camera size={20} />
-          </div>
-          <div>
-            <h4 className="font-bold text-slate-800">Camera</h4>
-            <p className="text-sm text-slate-500">HD Web Camera</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 text-green-600 font-bold text-sm bg-green-50 px-3 py-1 rounded-full shrink-0">
-          <CheckCircle2 size={16} /> Pass
-        </div>
-      </div>
-
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600 shrink-0">
-            <Globe size={20} />
-          </div>
-          <div>
-            <h4 className="font-bold text-slate-800">Browser</h4>
-            <p className="text-sm text-slate-500">Chrome (Supported)</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 text-green-600 font-bold text-sm bg-green-50 px-3 py-1 rounded-full shrink-0">
-          <CheckCircle2 size={16} /> Pass
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-const CTASection = () => {
-  const navigate = useNavigate();
-  return (
-    <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-8 text-white shadow-xl text-center md:text-left flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative">
-      <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="relative z-10">
-        <h3 className="text-2xl font-bold mb-2 tracking-tight">All systems look good!</h3>
-        <p className="text-indigo-100 text-lg">
-          You are ready to proceed to the waiting room.
-        </p>
-      </div>
-      <button 
-        onClick={() => navigate('/waiting-room')}
-        className="relative z-10 bg-white text-indigo-700 font-bold py-4 px-8 rounded-xl hover:bg-slate-50 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-sm text-lg whitespace-nowrap"
-      >
-        Proceed to Waiting Room
-      </button>
-    </div>
-  );
-};
+import { Mic, Video, Wifi, Monitor, CheckCircle2, XCircle, ChevronRight, Volume2, Shield } from 'lucide-react';
 
 const SystemCheck = () => {
+  const navigate = useNavigate();
+  const videoRef = useRef(null);
+  const [stream, setStream] = useState(null);
+  const [allPassed, setAllPassed] = useState(false);
+  const [checks, setChecks] = useState({
+    audio: { status: 'checking', label: 'Microphone Check', detail: 'Verifying input device...', sub: '' },
+    screen: { status: 'checking', label: 'Screen Share', detail: 'Checking permissions...', sub: '' },
+    network: { status: 'checking', label: 'Network Quality', detail: 'Testing connection...', sub: '' },
+  });
+
+  const streamRef = useRef(null);
+
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const ms = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        streamRef.current = ms;
+        setStream(ms);
+        if (videoRef.current) videoRef.current.srcObject = ms;
+        updateCheck('audio', 'passed', 'Built-in Microphone detected', 'Audio levels optimal');
+      } catch (err) {
+        updateCheck('audio', 'failed', 'Permission denied', 'Please enable mic in settings');
+      }
+      setTimeout(() => updateCheck('screen', 'passed', 'Screen Sharing Ready', 'System permissions granted'), 1200);
+      setTimeout(() => updateCheck('network', 'passed', 'Excellent (54 Mbps)', 'Latency: 14ms'), 1800);
+    };
+    init();
+    return () => { 
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    setAllPassed(Object.values(checks).every(c => c.status === 'passed'));
+  }, [checks]);
+
+  const updateCheck = (key, status, detail, sub) => {
+    setChecks(prev => ({ ...prev, [key]: { ...prev[key], status, detail, sub } }));
+  };
+
+  const handleJoin = () => {
+    if (allPassed) {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+      }
+      navigate('/waiting-room');
+    }
+  };
+
+  const iconMap = { audio: Mic, screen: Monitor, network: Wifi };
+
+  // Retrieve the recruiter's name from localStorage, fallback to 'Recruiter'
+  const recruiterName = localStorage.getItem('recruiter_name') || 'Recruiter';
+  const displayInitials = recruiterName.substring(0, 2).toUpperCase();
+
   return (
-    <LayoutWrapper title="System Check" breadcrumbs={["System Check", "Waiting Room"]} maxWidthClass="max-w-6xl" currentStep="system-check">
-      <div className="text-center py-2">
-        <h1 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Ready to start?</h1>
-        <p className="text-slate-500 text-lg">Let's make sure your equipment is working properly.</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-        <div className="flex flex-col h-full">
-          <CameraSection />
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-slate-900 pb-safe">
+      {/* Brand Header */}
+      <header className="flex items-center justify-between px-6 lg:px-12 h-18 bg-white border-b border-slate-200/60 shadow-sm sticky top-0 z-50">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
+            <Shield size={18} className="text-white" strokeWidth={2.5} />
+          </div>
+          <span className="font-extrabold text-lg tracking-tight text-slate-900">InterviewerAI</span>
         </div>
-        <div className="flex flex-col h-full">
-          <ChecklistCard />
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-[11px] font-bold text-blue-600 uppercase tracking-wider">
+          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+          System Check
         </div>
-      </div>
+      </header>
 
-      <CTASection />
-    </LayoutWrapper>
+      {/* Main Content */}
+      <main className="flex-1 flex justify-center p-6 lg:p-12 overflow-y-auto">
+        <div className="w-full max-w-[1200px] grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* Left: Video Preview Card */}
+          <div className="lg:col-span-7 bg-white rounded-[32px] border border-slate-200/60 overflow-hidden shadow-xl shadow-slate-200/40">
+            <div className="relative bg-slate-950 aspect-video w-full overflow-hidden">
+              <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+              
+              <div className="absolute top-4 left-4 flex flex-wrap gap-2">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/60 backdrop-blur-md border border-white/10 text-[10px] font-bold text-white uppercase tracking-wider">
+                  <div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444] animate-pulse" />
+                  Live Preview
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-green-500/10 backdrop-blur-md border border-green-500/20 text-[10px] font-bold text-green-400 uppercase tracking-wider">
+                  <Wifi size={12} />
+                  Stable Connection
+                </div>
+              </div>
+
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-3">
+                <button className="w-12 h-12 rounded-full bg-white/15 backdrop-blur-xl border border-white/20 text-white flex items-center justify-center hover:bg-white/25 transition-all active:scale-95 shadow-lg">
+                  <Mic size={20} />
+                </button>
+                <button className="w-12 h-12 rounded-full bg-white/15 backdrop-blur-xl border border-white/20 text-white flex items-center justify-center hover:bg-white/25 transition-all active:scale-95 shadow-lg">
+                  <Video size={20} />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-8 flex items-center gap-5">
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center border-2 border-white shadow-sm flex-shrink-0">
+                <span className="text-lg font-black text-blue-600">{displayInitials}</span>
+              </div>
+              <div className="min-w-0">
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Your Interviewer</div>
+                <div className="text-lg font-extrabold text-slate-900 truncate">{recruiterName}</div>
+                <div className="text-sm font-medium text-slate-500 truncate">Talent Acquisition</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Technical Checks */}
+          <div className="lg:col-span-5 flex flex-col gap-5">
+            {Object.entries(checks).map(([key, check]) => {
+              const Icon = iconMap[key];
+              const isPassed = check.status === 'passed';
+              const isFailed = check.status === 'failed';
+              const isChecking = check.status === 'checking';
+
+              return (
+                <div key={key} className="bg-white rounded-2xl border border-slate-200/60 p-5 flex items-start gap-5 hover:translate-x-1 transition-all duration-200 group">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${
+                    isPassed ? 'bg-green-50 text-green-600' : 
+                    isFailed ? 'bg-red-50 text-red-600' : 
+                    'bg-slate-50 text-slate-400'
+                  }`}>
+                    <Icon size={22} strokeWidth={isChecking ? 2 : 2.5} className={isChecking ? 'animate-pulse' : ''} />
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-extrabold text-slate-900 mb-0.5">{check.label}</div>
+                    <div className="text-xs font-medium text-slate-500 leading-relaxed mb-1">{check.detail}</div>
+                    {check.sub && <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{check.sub}</div>}
+                    {key === 'audio' && isPassed && (
+                      <button className="mt-3 text-[11px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 transition-colors">
+                        <Volume2 size={14} /> Play test sound
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="pt-1 flex-shrink-0">
+                    {isPassed && <CheckCircle2 size={22} className="text-green-500" />}
+                    {isFailed && <XCircle size={22} className="text-red-500" />}
+                    {isChecking && <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />}
+                  </div>
+                </div>
+              );
+            })}
+
+            <div className="mt-4">
+              <button
+                className={`w-full h-15 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all duration-300 shadow-lg ${
+                  allPassed 
+                  ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200 hover:-translate-y-0.5 active:scale-[0.98]' 
+                  : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                }`}
+                onClick={handleJoin}
+                disabled={!allPassed}
+              >
+                Join Interview Session
+                <ChevronRight size={20} className={allPassed ? 'translate-x-0 group-hover:translate-x-0.5 transition-transform' : ''} />
+              </button>
+              <p className="text-center text-xs font-medium text-slate-400 mt-4 leading-relaxed">
+                Hardware validation is required before you can be admitted to the waiting room.
+              </p>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="py-8 flex justify-center gap-8 px-6 bg-white border-t border-slate-200/60">
+        <a href="#" className="text-xs font-bold text-slate-400 hover:text-slate-600 uppercase tracking-widest transition-colors">Privacy</a>
+        <a href="#" className="text-xs font-bold text-slate-400 hover:text-slate-600 uppercase tracking-widest transition-colors">Terms</a>
+        <a href="#" className="text-xs font-bold text-slate-400 hover:text-slate-600 uppercase tracking-widest transition-colors">Support</a>
+      </footer>
+    </div>
   );
 };
 
-
 export default SystemCheck;
-

@@ -1,37 +1,49 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import Dashboard from './pages/Dashboard'
-import SystemCheck from './pages/SystemCheck'
-import WaitingRoom from './pages/WaitingRoom'
-import Interview from './pages/Interview'
-import DashboardResult from './pages/DashboardResult'
-import FeedbackMain from './pages/FeedbackMain'
-import DashboardUnderReview from './pages/DashboardUnderReview'
-import AIAssistance from './pages/AIAssistance'
-import Settings from './pages/Settings'
-import SessionValidation from './pages/SessionValidation'
-import ProtectedRoute from './components/ProtectedRoute'
-import './index.css'
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import { InterviewProvider } from './context/InterviewContext';
+import ProtectedRoute from './components/guards/ProtectedRoute';
+import './index.css';
+
+import SystemCheck from './pages/SystemCheck';
+import WaitingRoom from './pages/WaitingRoom';
+import Interview from './pages/Interview';
+import Submission from './pages/Submission';
+import Feedback from './pages/Feedback';
+import Login from './pages/Login';
+import Results from './pages/Results';
+import NotFound from './pages/NotFound';
+import SessionHandler from './components/SessionHandler';
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/interview/:token" element={<SessionValidation />} />
-        
-        <Route element={<ProtectedRoute />}>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/system-check" element={<SystemCheck />} />
-          <Route path="/waiting-room" element={<WaitingRoom />} />
-          <Route path="/interview" element={<Interview />} />
-          <Route path="/result" element={<DashboardResult />} />
-          <Route path="/feedback" element={<FeedbackMain />} />
-          <Route path="/review" element={<DashboardUnderReview />} />
-          <Route path="/help" element={<AIAssistance />} />
-          <Route path="/settings" element={<Settings />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
-  )
+    <AuthProvider>
+      <InterviewProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Session Initializer */}
+            <Route path="/interview/:token" element={<SessionHandler />} />
+
+            {/* Interview Flow — Public (no auth required) */}
+            <Route path="/system-check" element={<SystemCheck />} />
+            <Route path="/waiting-room" element={<WaitingRoom />} />
+            <Route path="/interview" element={<Interview />} />
+            <Route path="/submission" element={<Submission />} />
+            <Route path="/feedback" element={<Feedback />} />
+
+            {/* Results Access */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/results" element={<Results />} />
+
+            {/* Entry point is system-check */}
+            <Route path="/" element={<Navigate to="/system-check" replace />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </InterviewProvider>
+    </AuthProvider>
+  );
 }
 
-export default App
+export default App;
+

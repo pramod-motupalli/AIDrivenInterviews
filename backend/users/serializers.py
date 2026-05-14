@@ -12,8 +12,10 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         if self.user.role == 'recruiter' and not self.user.is_approved:
             raise serializers.ValidationError("Your account is pending admin approval.")
             
-        data['role'] = self.user.role
-        data['email'] = self.user.email
+        data['user'] = {
+            'email': self.user.email,
+            'role': self.user.role,
+        }
         return data
 
 class RecruiterRegistrationSerializer(serializers.ModelSerializer):

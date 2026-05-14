@@ -62,3 +62,16 @@ class AnomalyLog(models.Model):
 
     def __str__(self):
         return f"{self.event_type} - {self.interview.id}"
+
+class CandidateReview(models.Model):
+    interview = models.OneToOneField(Interview, on_delete=models.CASCADE, related_name='review', null=True, blank=True)
+    candidate_email = models.EmailField()
+    overall_experience = models.IntegerField(null=True, blank=True)  # 1-5 stars
+    ai_clarity = models.IntegerField(null=True, blank=True)
+    ease_of_use = models.IntegerField(null=True, blank=True)
+    technical_stability = models.IntegerField(null=True, blank=True)
+    comment = models.TextField(blank=True)
+    submitted_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Review by {self.candidate_email}"

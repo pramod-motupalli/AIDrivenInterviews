@@ -1,86 +1,76 @@
 import React from 'react';
 import { 
-  LayoutDashboard, 
-  ShieldCheck, 
-  BarChart2, 
-  HelpCircle, 
-  Settings, 
-  LogOut,
-  Sparkles
+  LogIn, MonitorCheck, Clock, Video, CheckCircle, MessageSquare, BarChart2, LogOut, Sparkles 
 } from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+
+const NavItem = ({ icon: Icon, label, path, active, onClick }) => (
+  <button
+    onClick={() => onClick(path)}
+    className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 font-bold group ${
+      active 
+        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' 
+        : 'text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'
+    }`}
+  >
+    <Icon size={22} className={`transition-transform duration-300 ${active ? 'scale-110' : 'group-hover:scale-110'}`} />
+    <span className="text-sm tracking-wide">{label}</span>
+  </button>
+);
 
 const Sidebar = () => {
-  const location = useLocation();
   const navigate = useNavigate();
-  const path = location.pathname;
+  const location = useLocation();
+  const { logout } = useAuth();
 
-  const getLinkClasses = (activePaths) => {
-    const isActive = activePaths.includes(path);
-    if (isActive) {
-      return "flex items-center gap-3 px-4 py-3 text-indigo-700 bg-indigo-50 border-l-4 border-indigo-500 font-semibold transition-all";
-    }
-    return "flex items-center gap-3 px-4 py-3 text-slate-500 hover:text-indigo-600 hover:bg-slate-50 transition-all border-l-4 border-transparent font-medium";
-  };
+  const flowItems = [
+    { icon: MonitorCheck, label: 'System Check', path: '/system-check' },
+    { icon: Clock, label: 'Waiting Room', path: '/waiting-room' },
+    { icon: Video, label: 'Interview', path: '/interview' },
+    { icon: CheckCircle, label: 'Submission', path: '/submission' },
+    { icon: MessageSquare, label: 'Feedback', path: '/feedback' },
+    { icon: BarChart2, label: 'Results', path: '/results' },
+  ];
 
-  const handleLogout = () => {
-    localStorage.removeItem('candidate_token');
-    localStorage.removeItem('candidate_name');
-    localStorage.removeItem('job_title');
-    navigate('/');
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
   };
 
   return (
-    <aside className="hidden lg:flex flex-col w-64 bg-white h-screen border-r border-slate-200 fixed left-0 top-0 z-50 shadow-sm">
-      {/* Header / Logo */}
-      <div className="p-6">
-        <div className="flex items-center gap-3 mb-10">
-          <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-md">
-            <Sparkles size={20} />
-          </div>
-          <span className="text-xl font-bold text-indigo-900 tracking-tight">TalentAI</span>
+    <aside className="hidden lg:flex flex-col w-72 h-screen sticky top-0 bg-white border-r border-slate-100 p-8 z-50">
+      {/* Brand Logo */}
+      <div className="flex items-center gap-3 mb-12 px-2">
+        <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-100">
+          <Sparkles className="text-white w-5 h-5" />
         </div>
-
-        {/* User Profile Summary (Optional, kept from existing) */}
-        <div className="flex items-center gap-4 mb-10 px-2">
-          <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-700 font-bold">
-            AR
-          </div>
-          <div className="overflow-hidden">
-            <h3 className="font-bold text-slate-800 text-sm truncate">Alex Rivers</h3>
-            <p className="text-[10px] text-slate-500 font-medium mt-0.5">ID: CND-8942</p>
-          </div>
-        </div>
-
-        {/* Navigation Items */}
-        <nav className="space-y-1">
-          <Link to="/" className={getLinkClasses(['/'])}>
-            <LayoutDashboard size={20} />
-            <span>Dashboard</span>
-          </Link>
-
-          <Link to="/system-check" className={getLinkClasses(['/system-check'])}>
-            <ShieldCheck size={20} />
-            <span>System Check</span>
-          </Link>
-
-          <Link to="/result" className={getLinkClasses(['/result'])}>
-            <BarChart2 size={20} />
-            <span>Results</span>
-          </Link>
-
-          <Link to="/help" className={getLinkClasses(['/help'])}>
-            <HelpCircle size={20} />
-            <span>Help Center</span>
-          </Link>
-
-          <Link to="/settings" className={getLinkClasses(['/settings'])}>
-            <Settings size={20} />
-            <span>Settings</span>
-          </Link>
-        </nav>
+        <span className="font-black text-2xl text-slate-900 tracking-tighter">TalentAI</span>
       </div>
 
+      {/* Main Navigation */}
+      <nav className="flex-1 space-y-2">
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 px-4">Interview Flow</p>
+        {flowItems.map((item) => (
+          <NavItem 
+            key={item.path}
+            {...item}
+            active={location.pathname === item.path}
+            onClick={(path) => navigate(path)}
+          />
+        ))}
+      </nav>
+
+      {/* Bottom */}
+      <div className="pt-8 border-t border-slate-50">
+        <button 
+          onClick={handleLogout}
+          className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-red-500 hover:bg-red-50 transition-all font-bold group mt-2"
+        >
+          <LogOut size={22} className="group-hover:translate-x-1 transition-transform" />
+          <span className="text-sm tracking-wide">Log Out</span>
+        </button>
+      </div>
     </aside>
   );
 };
