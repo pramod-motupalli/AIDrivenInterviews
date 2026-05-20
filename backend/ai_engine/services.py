@@ -136,26 +136,32 @@ Return ONLY a JSON object with this exact structure:
     def generate_next_question(self, interview, previous_answer=None, previous_score=None) -> str:
         """
         Generates the next technical interview question dynamically.
-        Adjusts difficulty based on the candidate's previous performance.
+        Varies difficulty from beginner to professional level based on performance.
         """
         jd_text = interview.job.description if interview.job else "No job description provided."
         resume_text = interview.resume_text if interview.resume_text else "No resume provided."
 
-        # Difficulty logic
+        # Difficulty logic for evaluating candidate from beginner to professional
         if previous_score is None:
-            difficulty_instruction = "As a Senior TA, ask an opening high-level technical question to assess their foundational expertise in the role."
-        elif previous_score > 80:
             difficulty_instruction = (
-                "The candidate provided a strong technical answer. As a Senior TA, challenge them with a "
-                "complex, architectural, or scenario-based deep-dive question to probe the limits of their expertise."
+                "Start with a foundational (Beginner level) technical question to assess basic knowledge "
+                "relevant to the role and the candidate's resume."
             )
-        elif previous_score < 50:
+        elif previous_score > 85:
             difficulty_instruction = (
-                "The candidate struggled with the technical details. As a Senior TA, ask a more direct, "
-                "fundamental technical question to see if they have a solid grasp of the basics."
+                "The candidate showed excellent proficiency. Ask a highly advanced (Professional/Architectural level) "
+                "question to challenge their expertise and probe the limits of their senior-level skills."
+            )
+        elif previous_score > 60:
+            difficulty_instruction = (
+                "The candidate has a good grasp. Ask a solid (Intermediate level) technical question "
+                "that bridges fundamentals with practical, scenario-based application."
             )
         else:
-            difficulty_instruction = "Ask a challenging technical question that bridges their experience with the job requirements."
+            difficulty_instruction = (
+                "The candidate struggled or was average. Ask a clear, direct technical question "
+                "to re-verify their foundational understanding of core concepts."
+            )
 
         prompt = f"""
 You are a Senior Talent Acquisition Lead conducting a professional technical interview.
@@ -174,8 +180,10 @@ Instruction:
 Rules:
 1. Act as a Senior Talent Acquisition Lead.
 2. Ask ONLY one clear, professional technical question.
-3. The question must be based on their resume projects or the JD requirements.
-4. Return ONLY the question text. No preamble, no explanation.
+3. Keep the question SHORT and CONCISE (maximum 20 words).
+4. The question must be based on their resume projects or the JD requirements.
+5. Goal: Evaluate the candidate across the spectrum from beginner level to professional expertise.
+6. Return ONLY the question text. No preamble, no explanation.
 """
         try:
             return self._chat_text(prompt)

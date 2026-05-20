@@ -237,13 +237,15 @@ Responses:
 
 Provide:
 1. Overall Score (0-100)
-2. Strengths
-3. Weaknesses
-4. Recommendation (Hire/Reject/Maybe)
+2. Overall Summary (brief 2-3 sentence overview of the performance)
+3. Strengths
+4. Weaknesses
+5. Recommendation (Hire/Reject/Maybe)
 
 Return ONLY a JSON object:
 {{
     "overall_score": 85,
+    "overall_summary": "A brief overview of how the candidate performed across all questions.",
     "strengths": "List strengths",
     "weaknesses": "List weaknesses",
     "recommendation": "Hire"
@@ -253,6 +255,7 @@ Return ONLY a JSON object:
                     report_obj = Report.objects.create(
                         interview=interview,
                         overall_score=report_data.get('overall_score'),
+                        overall_summary=report_data.get('overall_summary'),
                         strengths=report_data.get('strengths'),
                         weaknesses=report_data.get('weaknesses'),
                         recommendation=report_data.get('recommendation'),
@@ -275,6 +278,7 @@ Return ONLY a JSON object:
                             "candidate_email": candidate_email,
                             "job_title": interview.job.title if interview.job else "",
                             "overall_score": report_data.get('overall_score'),
+                            "overall_summary": report_data.get('overall_summary'),
                             "strengths": report_data.get('strengths'),
                             "weaknesses": report_data.get('weaknesses'),
                             "recommendation": report_data.get('recommendation'),

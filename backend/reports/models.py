@@ -5,6 +5,7 @@ class Report(models.Model):
     interview = models.OneToOneField(Interview, on_delete=models.CASCADE, related_name='report')
     
     overall_score = models.FloatField(null=True, blank=True)
+    overall_summary = models.TextField(blank=True, null=True)
     strengths = models.TextField(blank=True)
     weaknesses = models.TextField(blank=True)
     recommendation = models.TextField(blank=True)
