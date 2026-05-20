@@ -27,6 +27,33 @@
   img, video, svg {
     @apply max-w-full;
   }
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer utilities {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  .no-tap-highlight {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Custom interactive active states */
+@media (max-width: 1024px) {
+  body {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Smooth inertia scrolling on iOS devices */
+  .overflow-y-auto {
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 @theme inline {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const API_BASE = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'}/auth`;
@@ -27,13 +27,14 @@ export default function Login() {
       });
       const data = await res.json();
       if (res.ok) {
-        if (data.user.role === 'candidate') {
+        const userRole = data.role || (data.user && data.user.role);
+        if (userRole === 'candidate') {
           setMessage({ type: 'error', text: 'Access denied. Candidates cannot access the recruiter portal.' });
           return;
         }
         localStorage.setItem('access', data.access);
         localStorage.setItem('refresh', data.refresh);
-        localStorage.setItem('role', data.user.role);
+        localStorage.setItem('role', userRole);
         navigate('/dashboard');
       } else {
         setMessage({ type: 'error', text: data.detail || 'Invalid credentials.' });

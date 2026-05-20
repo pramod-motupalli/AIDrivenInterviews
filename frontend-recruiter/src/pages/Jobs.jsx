@@ -1,11 +1,18 @@
-import React, { useState } from 'react';
-import UploadBox from '@/components/common/UploadBox';
+import { useState } from 'react';
+import { 
+  EmptyCard, 
+  SelectedCard, 
+  LoadingCard, 
+  JDSuccessCard, 
+  ResumeSuccessCard 
+} from '@/components/candidates/AIUploadCard';
 import CandidateCard from '@/components/common/CandidateCard';
-import { Card } from '@/components/ui/card';
+import CandidateDeepView from '@/components/candidates/CandidateDeepView';
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
-
 export default function Jobs() {
+  const [activeTab, setActiveTab] = useState('screen'); // 'screen' or 'pipeline'
   const [jdFile, setJdFile] = useState(null);
   const [resumeFile, setResumeFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -14,6 +21,61 @@ export default function Jobs() {
   // New state for extracted data
   const [jobConfig, setJobConfig] = useState(null);
   const [analysisResult, setAnalysisResult] = useState(null);
+  const [showDeepView, setShowDeepView] = useState(false);
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
+  const [previewFile, setPreviewFile] = useState(null);
+
+  // Scheduling state for loading indicator
+  const [schedulingCandidateId, setSchedulingCandidateId] = useState(null);
+
+  // Delete candidate states
+  const [candidateToDelete, setCandidateToDelete] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+
+  // Screened list from LocalStorage or seed data
+  const [screenedList, setScreenedList] = useState(() => {
+    const saved = localStorage.getItem('screened_candidates');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return [
+      {
+        id: 'mock-1',
+        name: 'Sarah Jenkins',
+        email: 'sarah.jenkins@gmail.com',
+        ats_score: 92,
+        screened_at: '2 hours ago',
+        job_title: 'Senior UX Designer',
+        highlights: ['5+ years UI/UX experience', 'Figma design system expert', 'Led rebranding for SaaS startups'],
+        skills: ['Figma', 'User Research', 'Prototyping', 'Design Systems'],
+        job_config: {
+          title: 'Senior UX Designer',
+          department: 'Design',
+          skills: ['Figma', 'User Research', 'Design Systems']
+        }
+      },
+      {
+        id: 'mock-2',
+        name: 'Alex Rivera',
+        email: 'alex.rivera@techcorp.io',
+        ats_score: 88,
+        screened_at: 'Yesterday',
+        job_title: 'Full-Stack Developer',
+        highlights: ['Proficient in React & Node.js', 'Experience with PostgreSQL & AWS', 'Built real-time messaging apps'],
+        skills: ['React.js', 'Node.js', 'PostgreSQL', 'AWS', 'WebSockets'],
+        job_config: {
+          title: 'Full-Stack Developer',
+          department: 'Engineering',
+          skills: ['React.js', 'Node.js', 'AWS']
+        }
+      }
+    ];
+  });
+
 
   const handleUpload = async () => {
     if (!jdFile || !resumeFile) return;
@@ -24,12 +86,9 @@ export default function Jobs() {
     const token = localStorage.getItem('access');
 
     try {
-      // Create FormData to send files directly
       const formData = new FormData();
       formData.append('jd', jdFile);
       formData.append('resume', resumeFile);
-      
-      // Optional metadata - can be expanded later with UI fields
       formData.append('candidate_name', 'Extracted Candidate'); 
       formData.append('candidate_email', 'extracted@example.com');
 
@@ -39,13 +98,10 @@ export default function Jobs() {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
-          // Note: Do NOT set Content-Type header for FormData, 
-          // fetch will set it correctly with boundary
         },
         body: formData,
       });
 
-      // Check if response is JSON
       const processContentType = processRes.headers.get("content-type");
       if (!processContentType || !processContentType.includes("application/json")) {
         const text = await processRes.text();
@@ -58,18 +114,29 @@ export default function Jobs() {
         throw new Error(result.error || 'AI analysis failed');
       }
       
-      // 3. Update state with real data
-      setJobConfig(result.job_config);
-      setAnalysisResult({
-        ...result.candidate_details,
-        filename: resumeFile.name
-      });
-
-      setMessage({ type: 'success', text: '✅ Analysis completed successfully!' });
+      const localResumeUrl = resumeFile ? URL.createObjectURL(resumeFile) : null;
       
-      // Clear files but keep the results visible
-      setJdFile(null);
-      setResumeFile(null);
+      const newCand = {
+        ...result.candidate_details,
+        id: Date.now().toString(),
+        ats_score: result.candidate_details.ats_score || 0,
+        resume_url: result.resume_url,
+        local_resume_url: localResumeUrl,
+        filename: resumeFile.name,
+        job_title: result.job_config?.title || 'Unknown Job',
+        screened_at: 'Just Now',
+        job_config: result.job_config
+      };
+
+      setJobConfig(result.job_config);
+      setAnalysisResult(newCand);
+      setSelectedCandidate(newCand);
+
+      const updatedList = [newCand, ...screenedList];
+      setScreenedList(updatedList);
+      localStorage.setItem('screened_candidates', JSON.stringify(updatedList));
+
+      setMessage(null);
 
     } catch (error) {
       setMessage({ type: 'error', text: error.message });
@@ -78,110 +145,505 @@ export default function Jobs() {
     }
   };
 
+  const handleUpdateCandidate = (updatedData) => {
+    if (selectedCandidate) {
+      const updated = { ...selectedCandidate, ...updatedData };
+      setSelectedCandidate(updated);
+      
+      const updatedList = screenedList.map(c => c.id === selectedCandidate.id ? updated : c);
+      setScreenedList(updatedList);
+      localStorage.setItem('screened_candidates', JSON.stringify(updatedList));
+    }
+    if (analysisResult && (!selectedCandidate || selectedCandidate.id === analysisResult.id)) {
+      setAnalysisResult(prev => ({ ...prev, ...updatedData }));
+    }
+  };
+
+  const handleScheduleInterview = async (candidate) => {
+    if (!candidate) return;
+    setSchedulingCandidateId(candidate.id);
+    setMessage({ type: 'info', text: `Sending interview invite to ${candidate.name}...` });
+
+    const token = localStorage.getItem('access');
+    const defaultConfig = {
+      interview_type: 'Technical Interview',
+      difficulty: 'Medium',
+      duration: '30 mins',
+      enable_camera: true,
+      enable_microphone: true,
+      coding_round: false,
+      screen_sharing: false,
+      allow_retake: false,
+      auto_submit: true
+    };
+
+    try {
+      const res = await fetch(`${API_BASE}/interviews/invite/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          email: candidate.email,
+          name: candidate.name,
+          job_title: candidate.job_title || jobConfig?.title,
+          interview_type: defaultConfig.interview_type,
+          difficulty: defaultConfig.difficulty,
+          duration: defaultConfig.duration,
+          config: defaultConfig
+        }),
+      });
+
+      if (res.ok) {
+        setMessage({ type: 'success', text: `✅ Interview link sent to ${candidate.email}` });
+        
+        // Update both list and detail statuses
+        const updatedList = screenedList.map(c => 
+          c.id === candidate.id ? { ...c, status: 'Interview Pending' } : c
+        );
+        setScreenedList(updatedList);
+        localStorage.setItem('screened_candidates', JSON.stringify(updatedList));
+
+        if (analysisResult && analysisResult.id === candidate.id) {
+          setAnalysisResult(prev => ({ ...prev, status: 'Interview Pending' }));
+        }
+        if (selectedCandidate && selectedCandidate.id === candidate.id) {
+          setSelectedCandidate(prev => ({ ...prev, status: 'Interview Pending' }));
+        }
+      } else {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to send invite');
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message });
+    } finally {
+      setSchedulingCandidateId(null);
+    }
+  };
+
+  const handleConfirmDelete = (cand) => {
+    setCandidateToDelete(cand);
+  };
+
+  const handlePerformDelete = (id) => {
+    setCandidateToDelete(null);
+    setDeletingId(id);
+    
+    setTimeout(() => {
+      const updatedList = screenedList.filter(c => c.id !== id);
+      setScreenedList(updatedList);
+      localStorage.setItem('screened_candidates', JSON.stringify(updatedList));
+      setDeletingId(null);
+    }, 300);
+  };
+
   return (
-    <div className="space-y-8">
-      {/* Upload Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <UploadBox 
-          icon="description"
-          title={jdFile ? jdFile.name : "Upload Job Description"}
-          description="PDF, DOCX, or text content"
-          onFileSelect={setJdFile}
-        />
-        <UploadBox 
-          icon="upload_file"
-          title={resumeFile ? resumeFile.name : "Upload Candidate Resume"}
-          description="PDF or DOCX supported"
-          onFileSelect={setResumeFile}
-        />
+    <div className="space-y-6">
+      {/* Page Title & Tabs Navigation */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 pb-4">
+        <div>
+          <h1 className="text-lg sm:text-xl md:text-2xl font-extrabold text-gray-900 tracking-tight">Jobs & Candidates</h1>
+          <p className="text-xs md:text-sm text-gray-500 mt-0.5 sm:mt-1">Screen resumes and manage candidates in your pipeline</p>
+        </div>
+        <div className="flex bg-gray-100 p-1 rounded-xl shrink-0 w-full sm:w-auto">
+          <button
+            onClick={() => setActiveTab('screen')}
+            className={`flex-1 sm:flex-none justify-center px-4 py-2 text-xs md:text-sm font-bold rounded-lg cursor-pointer transition-all flex items-center gap-1.5 ${
+              activeTab === 'screen'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">upload_file</span>
+            Upload & Screen
+          </button>
+          <button
+            onClick={() => setActiveTab('pipeline')}
+            className={`flex-1 sm:flex-none justify-center px-4 py-2 text-xs md:text-sm font-bold rounded-lg cursor-pointer transition-all flex items-center gap-1.5 ${
+              activeTab === 'pipeline'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">group</span>
+            Screened Pipeline ({screenedList.length})
+          </button>
+        </div>
       </div>
 
       {message && (
-        <div className={`p-4 rounded-xl text-sm font-semibold animate-in fade-in duration-300 ${message.type === 'error' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-green-50 text-green-600 border border-green-100'}`}>
-          {message.text}
-        </div>
-      )}
-
-      <div className="flex justify-end">
-        <button 
-          onClick={handleUpload}
-          disabled={!jdFile || !resumeFile || loading}
-          className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50 transition-all transform active:scale-95 flex items-center gap-2 shadow-lg shadow-blue-200"
-        >
-          {loading ? (
-            <>
-              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-              Analyzing...
-            </>
-          ) : 'Start Screening'}
-        </button>
-      </div>
-
-      {/* Job Details Section */}
-      <section className={jobConfig ? 'animate-in fade-in slide-in-from-bottom-4 duration-700' : ''}>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-label-uppercase text-slate-500 uppercase tracking-widest text-[11px]">Active Job Configuration</h3>
-          {jobConfig && (
-            <button className="text-primary text-sm font-semibold flex items-center gap-1 hover:underline">
-              <span className="material-symbols-outlined text-sm">edit</span> Edit Details
+        <div className={`p-4 rounded-xl text-sm font-semibold animate-in fade-in duration-300 flex items-center justify-between gap-4 ${message.type === 'error' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-green-50 text-green-600 border border-green-100'}`}>
+          <span>{message.text}</span>
+          {message.type === 'success' && activeTab === 'screen' && (
+            <button 
+              onClick={() => setActiveTab('pipeline')}
+              className="text-xs font-bold underline hover:no-underline cursor-pointer"
+            >
+              View in Pipeline →
             </button>
           )}
         </div>
-        
-        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-          {jobConfig ? (
-            <>
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
-                    <span className="material-symbols-outlined text-3xl">work</span>
+      )}
+
+      {activeTab === 'screen' ? (
+        <div className="space-y-8 animate-in fade-in duration-300">
+          {/* Upload Section */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Job Description Card */}
+            {loading ? (
+              <LoadingCard type="jd" />
+            ) : jdFile ? (
+              <SelectedCard
+                file={jdFile}
+                type="jd"
+                onRemove={() => {
+                  setJdFile(null);
+                  setAnalysisResult(null);
+                }}
+                onReplace={(file) => {
+                  setJdFile(file);
+                  setAnalysisResult(null);
+                }}
+                disabled={loading}
+              />
+            ) : (
+              <EmptyCard
+                icon="description"
+                title="Upload Job Description"
+                description="PDF, DOCX, or text content"
+                onFileSelect={setJdFile}
+                disabled={loading}
+              />
+            )}
+
+            {/* Candidate Resume Card */}
+            {loading ? (
+              <LoadingCard type="resume" />
+            ) : resumeFile ? (
+              <SelectedCard
+                file={resumeFile}
+                type="resume"
+                onRemove={() => {
+                  setResumeFile(null);
+                  setAnalysisResult(null);
+                }}
+                onReplace={(file) => {
+                  setResumeFile(file);
+                  setAnalysisResult(null);
+                }}
+                disabled={loading}
+              />
+            ) : (
+              <EmptyCard
+                icon="upload_file"
+                title="Upload Candidate Resume"
+                description="PDF or DOCX supported"
+                onFileSelect={setResumeFile}
+                disabled={loading}
+              />
+            )}
+          </div>
+
+          <div className="flex justify-end">
+            <button 
+              onClick={handleUpload}
+              disabled={!jdFile || !resumeFile || loading}
+              className="w-full md:w-auto bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50 transition-all transform active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-blue-200 cursor-pointer"
+            >
+              {loading ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  Analyzing...
+                </>
+              ) : 'Start Screening'}
+            </button>
+          </div>
+
+          {/* Job Details Section */}
+          <section className={jobConfig ? 'animate-in fade-in slide-in-from-bottom-4 duration-700' : ''}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-label-uppercase text-slate-500 uppercase tracking-widest text-[11px]">Active Job Configuration</h3>
+              {jobConfig && (
+                <button className="text-primary text-sm font-semibold flex items-center gap-1 hover:underline cursor-pointer">
+                  <span className="material-symbols-outlined text-sm">edit</span> Edit Details
+                </button>
+              )}
+            </div>
+            
+            <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 shadow-sm">
+              {jobConfig ? (
+                <>
+                  <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+                    <div className="flex items-center gap-4 w-full sm:w-auto min-w-0">
+                      <div className="w-12 h-12 md:w-14 md:h-14 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 flex-shrink-0">
+                        <span className="material-symbols-outlined text-2xl md:text-3xl">work</span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-lg md:text-xl font-bold text-gray-900 leading-tight break-words">{jobConfig.title}</h4>
+                        <p className="text-xs md:text-sm text-gray-500 mt-1 truncate">{jobConfig.department} • Full-time • Remote</p>
+                      </div>
+                    </div>
+                    <div className="bg-gray-100 px-3 py-1 rounded-lg self-start shrink-0">
+                      <span className="text-[10px] md:text-[11px] font-bold text-gray-500 uppercase tracking-widest">EXTRACTED</span>
+                    </div>
                   </div>
+                  
+                  <div className="mt-6 pt-6 border-t border-gray-100">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">REQUIRED SKILLS & STACK</p>
+                    <div className="flex flex-wrap gap-2">
+                      {jobConfig.skills.map(skill => (
+                        <span key={skill} className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-semibold border border-blue-100">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8 text-gray-400">
+                  <span className="material-symbols-outlined text-4xl mb-2">info</span>
+                  <p>Upload a JD to see configuration</p>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Analysis Result */}
+          <section className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium text-gray-900">Analysis Result</h3>
+              {analysisResult && <span className="text-xs text-gray-400">Processed Just Now</span>}
+            </div>
+            
+            {analysisResult ? (
+              <CandidateCard 
+                candidate={analysisResult} 
+                jobTitle={analysisResult.job_title} 
+                onViewFullReport={() => {
+                  setSelectedCandidate(analysisResult);
+                  setShowDeepView(true);
+                }}
+                onUpdateCandidate={handleUpdateCandidate}
+                onSchedule={() => handleScheduleInterview(analysisResult)}
+                isScheduling={schedulingCandidateId === analysisResult.id}
+              />
+            ) : (
+              <div className="bg-gray-50 border border-dashed border-gray-200 rounded-xl p-12 text-center text-gray-400">
+                <p>Upload files and click "Start Screening" to analyze candidate match.</p>
+              </div>
+            )}
+          </section>
+        </div>
+      ) : (
+        /* Screened Candidates Pipeline List */
+        <section className="space-y-3 sm:space-y-4 pt-1 sm:pt-2 animate-in fade-in duration-300">
+          <div>
+            <h3 className="text-base sm:text-lg font-bold text-gray-900">Screened Candidates Pipeline</h3>
+            <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1">Candidates processed through AI resume screening and ATS scoring</p>
+          </div>
+
+          {screenedList.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-6">
+              {screenedList.map((cand) => (
+                <div 
+                  key={cand.id} 
+                  className={`bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group duration-300 ${
+                    deletingId === cand.id ? 'opacity-0 scale-95 -translate-y-4 pointer-events-none' : 'opacity-100 scale-100 translate-y-0'
+                  }`}
+                  onClick={() => {
+                    setSelectedCandidate(cand);
+                    setShowDeepView(true);
+                  }}
+                >
                   <div>
-                    <h4 className="text-xl font-bold text-gray-900 leading-tight">{jobConfig.title}</h4>
-                    <p className="text-sm text-gray-500 mt-1">{jobConfig.department} • Full-time • Remote</p>
+                    <div className="flex items-start justify-between gap-3 sm:gap-4">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-black text-xs sm:text-sm shrink-0">
+                           {cand.name ? cand.name.split(' ').map(n => n[0]).join('') : 'C'}
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-sm font-extrabold text-gray-950 group-hover:text-blue-600 transition-colors leading-tight truncate">
+                            {cand.name}
+                          </h4>
+                          <p className="text-xs text-gray-500 mt-0.5 truncate">{cand.email}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0 self-start">
+                        <div className="flex flex-col items-end">
+                          <span className="text-[10px] sm:text-xs font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                            {cand.ats_score || cand.score}% Match
+                          </span>
+                          <span className="text-[9px] sm:text-[10px] text-gray-400 mt-1">{cand.screened_at || 'Just Now'}</span>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleConfirmDelete(cand);
+                          }}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-100 transition-all cursor-pointer flex items-center justify-center shrink-0"
+                          title="Remove Candidate"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 pt-2.5 border-t border-gray-50">
+                      <div className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Applying For</div>
+                      <div className="text-xs font-bold text-gray-700">{cand.job_title || 'Unknown Job'}</div>
+                    </div>
+
+                    {cand.highlights && cand.highlights.length > 0 && (
+                      <div className="mt-2.5">
+                        <div className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Key Highlights</div>
+                        <div className="flex flex-wrap gap-1">
+                          {cand.highlights.slice(0, 3).map((h, idx) => (
+                            <span key={idx} className="text-[9px] sm:text-[10px] bg-gray-50 border border-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                              {h}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+                    {cand.status === 'Interview Pending' ? (
+                      <span className="text-xs font-extrabold text-emerald-600 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[16px] text-emerald-500">check_circle</span>
+                        Invite Sent
+                      </span>
+                    ) : (
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleScheduleInterview(cand);
+                        }}
+                        disabled={schedulingCandidateId === cand.id}
+                        className="text-xs font-extrabold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer disabled:opacity-75"
+                      >
+                        {schedulingCandidateId === cand.id ? (
+                          <>
+                            <span className="w-3.5 h-3.5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></span>
+                            Sending Invite...
+                          </>
+                        ) : (
+                          <>
+                            <span className="material-symbols-outlined text-[16px]">calendar_month</span>
+                            Schedule Interview
+                          </>
+                        )}
+                      </button>
+                    )}
+                    <span className="text-xs text-gray-400 font-semibold group-hover:translate-x-1 transition-all flex items-center gap-0.5">
+                      View Details
+                      <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+                    </span>
                   </div>
                 </div>
-                <div className="bg-gray-100 px-3 py-1 rounded-lg">
-                  <span className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">EXTRACTED</span>
-                </div>
-              </div>
-              
-              <div className="mt-6 pt-6 border-t border-gray-100">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">REQUIRED SKILLS & STACK</p>
-                <div className="flex flex-wrap gap-2">
-                  {jobConfig.skills.map(skill => (
-                    <span key={skill} className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-semibold border border-blue-100">
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </>
+              ))}
+            </div>
           ) : (
-            <div className="text-center py-8 text-gray-400">
-              <span className="material-symbols-outlined text-4xl mb-2">info</span>
-              <p>Upload a JD to see configuration</p>
+            <div className="bg-white border border-gray-100 rounded-xl p-12 text-center text-gray-400">
+              <span className="material-symbols-outlined text-4xl mb-2">group_off</span>
+              <p className="text-sm">No screened candidates in the pipeline yet. Screen a candidate to get started.</p>
             </div>
           )}
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* Analysis Result */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium text-gray-900">Analysis Result</h3>
-          {analysisResult && <span className="text-xs text-gray-400">Processed Just Now</span>}
-        </div>
-        
-        {analysisResult ? (
-          <CandidateCard candidate={analysisResult} jobTitle={jobConfig?.title} />
-        ) : (
-          <div className="bg-gray-50 border border-dashed border-gray-200 rounded-xl p-12 text-center text-gray-400">
-            <p>Upload files and click "Start Screening" to analyze candidate match.</p>
+      <CandidateDeepView 
+        isOpen={showDeepView}
+        onClose={() => {
+          setShowDeepView(false);
+          setSelectedCandidate(null);
+        }}
+        candidate={selectedCandidate} 
+        jobConfig={selectedCandidate?.job_config || jobConfig}
+        onUpdateCandidate={handleUpdateCandidate}
+        onSchedule={() => handleScheduleInterview(selectedCandidate)}
+        isScheduling={schedulingCandidateId === selectedCandidate?.id}
+        onReject={() => {
+           setShowDeepView(false);
+           const updatedList = screenedList.filter(c => c.id !== selectedCandidate.id);
+           setScreenedList(updatedList);
+           localStorage.setItem('screened_candidates', JSON.stringify(updatedList));
+           setSelectedCandidate(null);
+           setMessage({ type: 'info', text: 'Candidate rejected and removed from pipeline.' });
+        }}
+      />
+
+      {/* DOCUMENT PREVIEW MODAL */}
+      {previewFile && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:p-6 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-4xl h-[85vh] flex flex-col shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[20px]">
+                    {previewFile.type === 'jd' ? 'description' : 'picture_as_pdf'}
+                  </span>
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 text-sm truncate max-w-xs md:max-w-md">{previewFile.name}</h3>
+                  <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">File Preview</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setPreviewFile(null)}
+                className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 cursor-pointer transition-colors"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+            <div className="flex-1 bg-slate-100 p-4 flex items-center justify-center overflow-auto">
+              {previewFile.url ? (
+                <iframe 
+                  src={previewFile.url} 
+                  className="w-full h-full rounded-lg border border-slate-200 shadow-sm"
+                  title="Document Preview"
+                />
+              ) : (
+                <div className="text-center text-slate-400 py-12">
+                  <span className="material-symbols-outlined text-5xl mb-2">find_in_page</span>
+                  <p className="text-sm font-semibold">Preview not available for this file type</p>
+                </div>
+              )}
+            </div>
           </div>
-        )}
-      </section>
-
+        </div>
+      )}
+      {/* DELETE CONFIRMATION MODAL */}
+      {candidateToDelete && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white border border-gray-100 rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[22px]">warning</span>
+              </div>
+              <h3 className="text-base font-extrabold text-gray-950">Remove Candidate</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-6 leading-relaxed">
+              Remove this candidate from the pipeline?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setCandidateToDelete(null)}
+                className="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-xs sm:text-sm font-bold hover:bg-gray-50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handlePerformDelete(candidateToDelete.id)}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-lg shadow-red-100 transition-colors cursor-pointer"
+              >
+                Delete Candidate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

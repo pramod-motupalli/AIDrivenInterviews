@@ -1,8 +1,8 @@
-import React, { useRef } from 'react';
+import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
-export default function UploadBox({ icon, title, description, onFileSelect, loading, success }) {
+export default function UploadBox({ icon, title, description, onFileSelect, loading }) {
   const fileInputRef = useRef(null);
 
   const handleClick = () => {

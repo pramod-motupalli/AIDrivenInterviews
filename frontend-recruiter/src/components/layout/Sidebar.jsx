@@ -1,4 +1,3 @@
-import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 
 export default function Sidebar() {
@@ -20,7 +19,7 @@ export default function Sidebar() {
 
   return (
     <>
-      <aside className="w-[240px] flex-shrink-0 bg-white border-r border-gray-200 flex flex-col h-full z-30">
+      <aside className="hidden lg:flex w-[240px] flex-shrink-0 bg-white border-r border-gray-200 flex-col h-full z-30">
         
         {/* Logo Section */}
         <div className="p-6 border-b border-gray-100 mb-2">
@@ -49,6 +48,7 @@ export default function Sidebar() {
             <span className="material-symbols-outlined text-[20px]">analytics</span>
             <span>Reports</span>
           </NavLink>
+
         </nav>
 
         {/* Logout */}
@@ -64,18 +64,18 @@ export default function Sidebar() {
       </aside>
 
       {/* Mobile Bottom Nav */}
-      <nav className="lg:hidden fixed bottom-0 left-0 w-full h-16 z-50 flex justify-around items-center px-4 bg-white border-t border-gray-200 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
-        <NavLink to="/dashboard" className={({ isActive }) => `flex flex-col items-center justify-center px-4 py-1 transition-colors ${isActive ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'}`}>
-          <span className="material-symbols-outlined mb-1">dashboard</span>
-          <span className="text-[10px] font-bold uppercase tracking-wider">Dashboard</span>
+      <nav className="lg:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-[0_-4px_16px_rgba(0,0,0,0.04)] pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] h-[calc(4.25rem+env(safe-area-inset-bottom))]">
+        <NavLink to="/dashboard" className={({ isActive }) => `flex flex-col items-center justify-center flex-1 py-1.5 transition-all active:scale-95 ${isActive ? 'text-blue-600 scale-105' : 'text-gray-500 hover:text-blue-600'}`}>
+          <span className="material-symbols-outlined mb-0.5 text-[22px]">dashboard</span>
+          <span className="text-[10px] font-extrabold uppercase tracking-wider">Dashboard</span>
         </NavLink>
-        <NavLink to="/jobs" className={({ isActive }) => `flex flex-col items-center justify-center px-4 py-1 transition-colors ${isActive ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'}`}>
-          <span className="material-symbols-outlined mb-1">work</span>
-          <span className="text-[10px] font-bold uppercase tracking-wider">Jobs</span>
+        <NavLink to="/jobs" className={({ isActive }) => `flex flex-col items-center justify-center flex-1 py-1.5 transition-all active:scale-95 ${isActive ? 'text-blue-600 scale-105' : 'text-gray-500 hover:text-blue-600'}`}>
+          <span className="material-symbols-outlined mb-0.5 text-[22px]">work</span>
+          <span className="text-[10px] font-extrabold uppercase tracking-wider">Jobs</span>
         </NavLink>
-        <NavLink to="/reports" className={({ isActive }) => `flex flex-col items-center justify-center px-4 py-1 transition-colors ${isActive ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'}`}>
-          <span className="material-symbols-outlined mb-1">analytics</span>
-          <span className="text-[10px] font-bold uppercase tracking-wider">Reports</span>
+        <NavLink to="/reports" className={({ isActive }) => `flex flex-col items-center justify-center flex-1 py-1.5 transition-all active:scale-95 ${isActive ? 'text-blue-600 scale-105' : 'text-gray-500 hover:text-blue-600'}`}>
+          <span className="material-symbols-outlined mb-0.5 text-[22px]">analytics</span>
+          <span className="text-[10px] font-extrabold uppercase tracking-wider">Reports</span>
         </NavLink>
       </nav>
     </>

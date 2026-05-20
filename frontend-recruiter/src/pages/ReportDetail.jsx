@@ -1,8 +1,7 @@
-import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 
 export default function ReportDetail() {
-  const { id } = useParams();
+  useParams();
 
   const scores = [
     { label: 'Technical', value: 94, color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -20,28 +19,28 @@ export default function ReportDetail() {
       </nav>
 
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-4">
-        <div className="flex items-center gap-4">
-          <Link to="/reports" className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-900 hover:border-gray-300 transition-all">
-            <span className="material-symbols-outlined">arrow_back</span>
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
+        <div className="flex items-center gap-3 md:gap-4">
+          <Link to="/reports" className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-900 hover:border-gray-300 transition-all shrink-0">
+            <span className="material-symbols-outlined text-[20px] md:text-[24px]">arrow_back</span>
           </Link>
-          <div className="h-16 w-16 rounded-xl bg-white border border-gray-100 flex items-center justify-center overflow-hidden shadow-sm">
+          <div className="h-12 w-12 md:h-16 md:w-16 rounded-xl bg-white border border-gray-100 flex items-center justify-center overflow-hidden shadow-sm shrink-0">
             <img 
               alt="Candidate Profile" 
               className="w-full h-full object-cover" 
               src="https://lh3.googleusercontent.com/aida-public/AB6AXuCwUVvBVlpecY4XCZlLDAQXUttnFpV_sw9nezenMDNIzPvKkEwN5vJ-vmdy4icDNrf_tXYes-w7A0PS0mwcBrHpyn1VMUo1iJfi4tOYsYagF723GaaURyPjjjV202Y0aRO_DKX4WqxuzfABjhrICN_uG_cRe2tw_s9R5AegOTKXm3JZIe60PlylWQusimAxua7D8KiJHSAdFNSmyYpgMcv8FTLYeqnHB5uU5_UWZ4df-A7wZJP_UW809Jljf9-DmGmnUpRedvYdtzE" 
             />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Jordan Devereaux</h1>
-            <p className="text-sm text-gray-500 mt-0.5">Senior Full-Stack Engineer • Dec 12, 2023</p>
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">Jordan Devereaux</h1>
+            <p className="text-xs md:text-sm text-gray-500 mt-0.5 truncate">Senior Full-Stack Engineer • Dec 12, 2023</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <button className="px-6 py-2.5 border border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 transition-colors">
+        <div className="flex items-center gap-2 md:gap-3">
+          <button className="flex-1 lg:flex-none px-4 md:px-6 py-2.5 border border-red-200 text-red-600 rounded-lg text-sm font-bold hover:bg-red-50 transition-colors">
             Reject
           </button>
-          <button className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm">
+          <button className="flex-1 lg:flex-none px-4 md:px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors shadow-sm">
             Hire Candidate
           </button>
         </div>
