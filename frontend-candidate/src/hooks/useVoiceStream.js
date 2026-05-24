@@ -84,13 +84,13 @@ export default function useVoiceStream({ onSilenceDetected } = {}) {
         for (let i = 0; i < event.results.length; ++i) {
           const segment = event.results[i][0].transcript;
           if (event.results[i].isFinal) {
-            finalText += segment;
+            finalText += (finalText ? " " : "") + segment.trim();
           } else {
-            interimText += segment;
+            interimText += (interimText ? " " : "") + segment.trim();
           }
         }
 
-        const combinedText = (finalText + interimText).trim();
+        const combinedText = (finalText + (finalText && interimText ? " " : "") + interimText).trim();
         if (combinedText) {
           setVoiceTranscript(combinedText);
           lastTextRef.current = combinedText;
