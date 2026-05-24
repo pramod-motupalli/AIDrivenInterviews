@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import { interviewService } from '../api/services/interviewService';
+import { MOCK_INTERVIEW_QUESTIONS } from '../api/mockData';
 
 const InterviewContext = createContext(null);
 
@@ -14,7 +15,14 @@ export const InterviewProvider = ({ children }) => {
     setLoading(true);
     try {
       const token = localStorage.getItem('interview_session_token');
-      if (!token) throw new Error("No session token found");
+      if (!token) {
+        console.warn("No session token found. Initialising mock interview flow.");
+        setQuestions(MOCK_INTERVIEW_QUESTIONS);
+        setCurrentIndex(0);
+        setAnswers({});
+        setIsComplete(false);
+        return;
+      }
 
       const data = await interviewService.startInterview(token);
       
@@ -25,6 +33,11 @@ export const InterviewProvider = ({ children }) => {
       setIsComplete(false);
     } catch (error) {
       console.error('Failed to start interview:', error);
+      // Fallback on API failure
+      setQuestions(MOCK_INTERVIEW_QUESTIONS);
+      setCurrentIndex(0);
+      setAnswers({});
+      setIsComplete(false);
     } finally {
       setLoading(false);
     }
@@ -33,11 +46,25 @@ export const InterviewProvider = ({ children }) => {
   const submitAnswer = async (questionId, transcript) => {
     setLoading(true);
     try {
-      const interviewId = localStorage.getItem('interview_id');
+      const token = localStorage.getItem('interview_session_token');
       const currentQ = questions[currentIndex];
       
       // Save the answer locally
       setAnswers(prev => ({ ...prev, [currentIndex]: transcript }));
+
+      if (!token) {
+        // Mock mode progression:
+        // Move to next mock question or finish after 5 questions
+        const nextIndex = currentIndex + 1;
+        if (nextIndex >= Math.min(questions.length, 5)) {
+          setIsComplete(true);
+        } else {
+          setCurrentIndex(nextIndex);
+        }
+        return;
+      }
+
+      const interviewId = localStorage.getItem('interview_id');
 
       // Send to backend for Groq evaluation and next question generation
       const data = await interviewService.submitAnswer(
@@ -63,6 +90,13 @@ export const InterviewProvider = ({ children }) => {
       }
     } catch (error) {
       console.error("Failed to submit answer:", error);
+      // Fallback in case of API error, allow user to move forward locally
+      const nextIndex = currentIndex + 1;
+      if (nextIndex >= Math.min(questions.length, 5)) {
+        setIsComplete(true);
+      } else {
+        setCurrentIndex(nextIndex);
+      }
     } finally {
       setLoading(false);
     }

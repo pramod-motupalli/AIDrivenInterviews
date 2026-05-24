@@ -11,7 +11,6 @@ class InterviewConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
         self.session_token = self.scope['url_route']['kwargs']['session_token']
-        self.room_group_name = f'interview_{self.session_token}'
 
         # ── JWT auth from query string (?token=...) ──────────────────
         user = await self.get_user_from_query()
@@ -24,6 +23,10 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         if not self.interview:
             await self.close(code=4004)
             return
+
+        # Use the actual interview's session token to ensure recruiter (connecting via ID)
+        # joins the exact same room as the candidate (connecting via UUID).
+        self.room_group_name = f'interview_{self.interview.session_token}'
 
         # ── Check link expiry ─────────────────────────────────────────
         expired = await self.is_expired()
@@ -57,11 +60,11 @@ class InterviewConsumer(AsyncWebsocketConsumer):
     async def handle_session_start(self):
         await self.update_interview_status('in_progress')
         question_text = await self.generate_next_question(None, None)
-        await self.send(text_data=json.dumps({
-            'type': 'question',
+        await self.channel_layer.group_send(self.room_group_name, {
+            'type': 'question_event',
             'question_index': 1,
             'question_text': question_text,
-        }))
+        })
 
     async def handle_answer(self, data):
         answer_text = data.get('answer_text', '')
@@ -74,23 +77,61 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         # Persist response
         await self.save_response(question_index, question_text, answer_text, evaluation)
 
+        # Broadcast answer evaluation
+        await self.channel_layer.group_send(self.room_group_name, {
+            'type': 'answer_event',
+            'question_index': question_index,
+            'question_text': question_text,
+            'answer_text': answer_text,
+            'evaluation': evaluation,
+        })
+
         # End after 5 questions
         if question_index >= 5:
             await self.update_interview_status('completed')
-            await self.send(text_data=json.dumps({'type': 'end_session', 'message': 'Interview completed.'}))
+            await self.channel_layer.group_send(self.room_group_name, {
+                'type': 'end_session_event',
+                'message': 'Interview completed.'
+            })
             return
 
         # Generate next question dynamically
         next_q = await self.generate_next_question(answer_text, evaluation.get('overall_score', 50))
-        await self.send(text_data=json.dumps({
-            'type': 'question',
+        await self.channel_layer.group_send(self.room_group_name, {
+            'type': 'question_event',
             'question_index': question_index + 1,
             'question_text': next_q,
-        }))
+        })
 
     async def handle_end_session(self):
         await self.update_interview_status('completed')
-        await self.send(text_data=json.dumps({'type': 'end_session', 'message': 'Session ended.'}))
+        await self.channel_layer.group_send(self.room_group_name, {
+            'type': 'end_session_event',
+            'message': 'Session ended.'
+        })
+
+    # ── Channel Group Event Handlers ──────────────────────────────────
+    async def question_event(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'question',
+            'question_index': event['question_index'],
+            'question_text': event['question_text'],
+        }))
+
+    async def answer_event(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'answer',
+            'question_index': event['question_index'],
+            'question_text': event['question_text'],
+            'answer_text': event['answer_text'],
+            'evaluation': event['evaluation'],
+        }))
+
+    async def end_session_event(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'end_session',
+            'message': event['message'],
+        }))
 
     # ── DB helpers ────────────────────────────────────────────────────
 
@@ -113,8 +154,14 @@ class InterviewConsumer(AsyncWebsocketConsumer):
 
     @sync_to_async
     def get_interview(self, token):
+        from django.db.models import Q
         try:
-            return Interview.objects.select_related('job', 'candidate').get(session_token=token)
+            try:
+                interview_id = int(token)
+                query = Q(id=interview_id) | Q(session_token=token)
+            except ValueError:
+                query = Q(session_token=token)
+            return Interview.objects.select_related('job', 'candidate').get(query)
         except Interview.DoesNotExist:
             return None
 

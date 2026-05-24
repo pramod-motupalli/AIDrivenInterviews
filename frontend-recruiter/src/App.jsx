@@ -7,7 +7,7 @@ import Reports from './pages/Reports';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import ReportDetail from './pages/ReportDetail';
 import Profile from './pages/Profile';
-import CandidateInterview from './pages/CandidateInterview';
+
 import LiveMonitoring from './pages/LiveMonitoring';
 import Notifications from './pages/Notifications';
 
@@ -15,14 +15,13 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Public candidate interview route – no auth wrapper */}
-        <Route path="/interview/:token" element={<CandidateInterview />} />
         <Route path="/" element={<Login />} />
-        
+
+
         <Route element={<ProtectedRoute />}>
           {/* Full-screen protected routes */}
           <Route path="/live-monitoring/:sessionId" element={<LiveMonitoring />} />
-          
+
           {/* Main dashboard layout routes */}
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<Dashboard />} />

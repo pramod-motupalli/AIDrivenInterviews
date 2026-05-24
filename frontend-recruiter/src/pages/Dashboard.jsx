@@ -1,27 +1,49 @@
 
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
 export default function Dashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [statsData, setStatsData] = useState({
+    total_jobs: 0,
+    total_candidates: 0,
+    active_interviews: 0,
+    activities: []
+  });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const token = localStorage.getItem('access');
+        const res = await fetch(`${API_BASE}/interviews/dashboard-stats/`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setStatsData(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch dashboard statistics", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
 
   const stats = [
-    { label: 'Total Jobs', value: '24', icon: 'work', change: '+2 this week', color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Total Candidates', value: '1,482', icon: 'group', change: '15 new', color: 'text-indigo-600', bg: 'bg-indigo-50' },
-    { label: 'Active Interviews', value: '12', icon: 'video_chat', change: 'Live now', color: 'text-violet-600', bg: 'bg-violet-50' },
+    { label: 'Total Jobs', value: statsData.total_jobs.toString(), icon: 'work', change: 'Active postings', color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Total Candidates', value: statsData.total_candidates.toString(), icon: 'group', change: 'All time', color: 'text-indigo-600', bg: 'bg-indigo-50' },
+    { label: 'Active Interviews', value: statsData.active_interviews.toString(), icon: 'video_chat', change: 'Live tracking', color: 'text-violet-600', bg: 'bg-violet-50' },
   ];
 
-  const activities = [
-    { title: 'AI Interview Completed', detail: 'Alex Rivera scored 92% for the Senior UX Designer role.', time: '2 hours ago', icon: 'check_circle', iconColor: 'text-emerald-600', iconBg: 'bg-emerald-50' },
-    { title: 'New Application', detail: 'Sarah Chen applied for the Product Manager position.', time: '5 hours ago', icon: 'person_add', iconColor: 'text-blue-600', iconBg: 'bg-blue-50' },
-    { title: 'Job Posted', detail: 'Technical Lead is now live on 4 recruitment platforms.', time: 'Yesterday', icon: 'campaign', iconColor: 'text-violet-600', iconBg: 'bg-violet-50' },
-    { title: 'Interview Scheduled', detail: 'Sarah Jenkins scheduled an interview for tomorrow at 2 PM.', time: '1 day ago', icon: 'calendar_month', iconColor: 'text-blue-600', iconBg: 'bg-blue-50' },
-    { title: 'System Warning', detail: 'Candidate Mark Thompson was flagged for abnormal tab switching activity.', time: '2 days ago', icon: 'warning', iconColor: 'text-amber-600', iconBg: 'bg-amber-50' },
-    { title: 'AI Screening Completed', detail: 'John Doe scored 88% ATS match for Full-Stack Developer.', time: '2 days ago', icon: 'analytics', iconColor: 'text-blue-600', iconBg: 'bg-blue-50' },
-    { title: 'Job Draft Saved', detail: 'Draft for Backend Engineer (Python/Django) was saved.', time: '3 days ago', icon: 'edit_note', iconColor: 'text-gray-600', iconBg: 'bg-gray-100' },
-    { title: 'Candidate Shortlisted', detail: 'Jane Smith was shortlisted for the Product Designer role.', time: '4 days ago', icon: 'star', iconColor: 'text-indigo-600', iconBg: 'bg-indigo-50' },
-  ];
+  const activities = statsData.activities || [];
 
   const filteredActivities = activities.filter(activity => 
     activity.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -69,20 +91,27 @@ export default function Dashboard() {
           </button>
         </div>
         <div className="divide-y divide-gray-100">
-          {activities.slice(0, 3).map((activity, i) => (
-            <div key={i} className="px-3.5 sm:px-6 py-3 sm:py-4 flex items-center gap-3 sm:gap-4 hover:bg-gray-50 transition-colors cursor-pointer">
-              <div className={`${activity.iconBg} ${activity.iconColor} w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0`}>
-                <span className="material-symbols-outlined text-[18px] sm:text-[20px]">{activity.icon}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] sm:text-sm font-bold text-gray-900 truncate leading-tight">{activity.title}</p>
-                <p className="text-xs sm:text-sm text-gray-500 truncate mt-0.5">{activity.detail}</p>
-              </div>
-              <div className="text-[11px] sm:text-xs text-gray-400 whitespace-nowrap ml-2 shrink-0">
-                {activity.time}
-              </div>
+          {activities.length === 0 ? (
+            <div className="px-6 py-12 text-center text-gray-500 font-semibold">
+              <span className="material-symbols-outlined text-4xl mb-2 text-gray-300">history</span>
+              <p>No recent activity</p>
             </div>
-          ))}
+          ) : (
+            activities.slice(0, 3).map((activity, i) => (
+              <div key={i} className="px-3.5 sm:px-6 py-3 sm:py-4 flex items-center gap-3 sm:gap-4 hover:bg-gray-50 transition-colors cursor-pointer">
+                <div className={`${activity.iconBg} ${activity.iconColor} w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0`}>
+                  <span className="material-symbols-outlined text-[18px] sm:text-[20px]">{activity.icon}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] sm:text-sm font-bold text-gray-900 truncate leading-tight">{activity.title}</p>
+                  <p className="text-xs sm:text-sm text-gray-500 truncate mt-0.5">{activity.detail}</p>
+                </div>
+                <div className="text-[11px] sm:text-xs text-gray-400 whitespace-nowrap ml-2 shrink-0">
+                  {activity.time}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 

@@ -5,7 +5,7 @@ from .views import (
     CustomTokenObtainPairView, RecruiterRegisterView,
     AdminApproveRecruiterView, AdminRejectRecruiterView,
     PendingRecruitersView, CandidateViewSet, RecruiterViewSet,
-    FirstLoginPasswordResetView, CurrentUserView
+    FirstLoginPasswordResetView, CurrentUserView, ChangePasswordView
 )
 
 urlpatterns = [
@@ -17,6 +17,7 @@ urlpatterns = [
     path('admin/approve/<int:pk>/', AdminApproveRecruiterView.as_view(), name='approve_recruiter'),
     path('admin/reject/<int:pk>/', AdminRejectRecruiterView.as_view(), name='reject_recruiter'),
     path('password-reset/first-login/', FirstLoginPasswordResetView.as_view(), name='first_login_password_reset'),
+    path('change-password/', ChangePasswordView.as_view(), name='change_password'),
 ]
 
 router = DefaultRouter()

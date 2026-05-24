@@ -12,6 +12,8 @@ import uuid
 import secrets
 import string
 from django.conf import settings
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 from rest_framework_simplejwt.tokens import RefreshToken
 
 User = get_user_model()
@@ -63,6 +65,10 @@ class InviteCandidateView(APIView):
         # Link 2: permanent recruiter tracking link
         tracking_link = f"{settings.RECRUITER_FRONTEND_URL}/recruiter/interviews/{session_token}/track"
 
+        ats_score = request.data.get('ats_score')
+        skills = request.data.get('skills', [])
+        highlights = request.data.get('highlights', [])
+
         interview = Interview.objects.create(
             job=job,
             candidate=user,
@@ -71,8 +77,18 @@ class InviteCandidateView(APIView):
             link2=tracking_link,
             link1_expiry=timezone.now() + timedelta(hours=settings.SESSION_LINK_EXPIRY_HOURS),
             resume_text=resume_text,
-            candidate_name=candidate_name
+            ats_score=ats_score,
+            skills=skills,
+            highlights=highlights
         )
+
+        # Store candidate name in the normalised CandidateProfile table
+        if candidate_name:
+            from users.models import CandidateProfile
+            profile, _ = CandidateProfile.objects.get_or_create(user=user)
+            if not profile.full_name:
+                profile.full_name = candidate_name
+                profile.save()
 
         # Send Email with credentials and both links
         context = {
@@ -90,6 +106,53 @@ class InviteCandidateView(APIView):
             "invite_link": invite_link,
             "tracking_link": tracking_link,
         }, status=status.HTTP_201_CREATED)
+
+class CandidateDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request):
+        email = request.GET.get('email')
+        if not email:
+            return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 1. Delete from Supabase (including files in storage)
+        from core.supabase_client import SupabaseService
+        try:
+            supabase = SupabaseService().client
+            if supabase:
+                # Fetch row to get file URLs
+                response = supabase.table('screenings').select('*').eq('candidate_email', email).execute()
+                if response.data:
+                    screening = response.data[0]
+                    def get_path(url):
+                        if not url: return None
+                        parts = url.split('/public/screening-documents/')
+                        return parts[1] if len(parts) > 1 else None
+
+                    paths_to_delete = []
+                    for key in ['resume_url', 'jd_url', 'report_url']:
+                        path = get_path(screening.get(key))
+                        if path:
+                            paths_to_delete.append(path)
+                    
+                    if paths_to_delete:
+                        supabase.storage.from_('screening-documents').remove(paths_to_delete)
+                
+                # Delete the DB row
+                supabase.table('screenings').delete().eq('candidate_email', email).execute()
+        except Exception as e:
+            print(f"Error deleting from supabase: {e}")
+
+        # 2. Delete from Postgres User table (Cascades to Profiles, Interviews, Reports, etc.)
+        try:
+            # We enforce role='candidate' so recruiter doesn't accidentally delete another recruiter
+            user = User.objects.get(email=email, role='candidate')
+            user.delete()
+        except User.DoesNotExist:
+            # User might not exist if they were only screened and never invited
+            pass
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 class ValidateSessionView(APIView):
     permission_classes = [AllowAny]
@@ -162,6 +225,17 @@ class StartInterviewView(APIView):
                 interview.question_bank = [{"text": first_q, "index": 0}]
                 interview.status = 'in_progress'
                 interview.save()
+                
+                # Broadcast first question to live monitoring
+                channel_layer = get_channel_layer()
+                async_to_sync(channel_layer.group_send)(
+                    f'interview_{interview.session_token}',
+                    {
+                        'type': 'question_event',
+                        'question_index': 0,
+                        'question_text': first_q
+                    }
+                )
             
             return Response({
                 "questions": interview.question_bank,
@@ -200,6 +274,21 @@ class SubmitAnswerView(APIView):
                 clarity_score=evaluation.get('clarity_score')
             )
 
+            # Broadcast Answer to Live Monitoring
+            channel_layer = get_channel_layer()
+            room_group_name = f'interview_{interview.session_token}'
+            
+            async_to_sync(channel_layer.group_send)(
+                room_group_name,
+                {
+                    'type': 'answer_event',
+                    'question_index': question_index,
+                    'question_text': question_text,
+                    'answer_text': answer_text,
+                    'evaluation': evaluation
+                }
+            )
+
             # 3. Decide on next question (Limit to 5)
             next_index = question_index + 1
             if next_index < 5:
@@ -213,6 +302,16 @@ class SubmitAnswerView(APIView):
                 interview.question_bank.append({"text": next_q_text, "index": next_index})
                 interview.save()
                 
+                # Broadcast Next Question to Live Monitoring
+                async_to_sync(channel_layer.group_send)(
+                    room_group_name,
+                    {
+                        'type': 'question_event',
+                        'question_index': next_index,
+                        'question_text': next_q_text
+                    }
+                )
+
                 return Response({
                     "next_question": next_q_text,
                     "index": next_index,
@@ -222,6 +321,15 @@ class SubmitAnswerView(APIView):
             else:
                 interview.status = 'completed'
                 interview.save()
+                
+                # Broadcast End Session
+                async_to_sync(channel_layer.group_send)(
+                    room_group_name,
+                    {
+                        'type': 'end_session_event',
+                        'message': 'Session completed.'
+                    }
+                )
 
                 # Generate Final Report
                 try:
@@ -311,22 +419,7 @@ Return ONLY a JSON object:
                     except Exception as supabase_err:
                         print(f"Supabase report upload failed (non-critical): {supabase_err}")
 
-                    # 4. Generate new password and send completion email
-                    try:
-                        import string, secrets
-                        from notifications.utils import send_candidate_completion_email
-                        
-                        user = interview.candidate
-                        alphabet = string.ascii_letters + string.digits
-                        new_password = ''.join(secrets.choice(alphabet) for _ in range(12))
-                        
-                        user.set_password(new_password)
-                        user.save()
-                        
-                        send_candidate_completion_email(user, new_password)
-                        print(f"Sent completion email to {user.email}")
-                    except Exception as mail_err:
-                        print(f"Failed to send completion email: {mail_err}")
+                    # Candidate results portal is disabled; no completion email or password reset needed.
 
                 except Exception as e:
                     print(f"Error generating report: {e}")
@@ -347,11 +440,18 @@ class GetResultsView(APIView):
 
     def get(self, request):
         interview_id = request.query_params.get('interview_id')
+        user = request.user
         try:
             if interview_id:
-                interview = Interview.objects.get(id=interview_id, candidate=request.user)
+                if user.role == 'recruiter':
+                    interview = Interview.objects.get(id=interview_id, job__recruiter=user)
+                else:
+                    interview = Interview.objects.get(id=interview_id, candidate=user)
             else:
-                interview = Interview.objects.filter(candidate=request.user, status='completed').latest('created_at')
+                if user.role == 'recruiter':
+                    interview = Interview.objects.filter(job__recruiter=user, status='completed').latest('created_at')
+                else:
+                    interview = Interview.objects.filter(candidate=user, status='completed').latest('created_at')
         except Interview.DoesNotExist:
             return Response({"error": "Interview not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -374,6 +474,7 @@ class GetResultsView(APIView):
             report = interview.report
             report_data = {
                 "overall_score": report.overall_score,
+                "overall_summary": report.overall_summary,
                 "strengths": report.strengths,
                 "weaknesses": report.weaknesses,
                 "recommendation": report.recommendation,
@@ -382,9 +483,14 @@ class GetResultsView(APIView):
             pass
 
         return Response({
+            "interview_id": str(interview.id),
             "candidate_name": interview.candidate_name or interview.candidate.email,
+            "candidate_email": interview.candidate.email,
             "job_title": interview.job.title if interview.job else "",
             "status": interview.status,
+            "skills": interview.skills,
+            "highlights": interview.highlights,
+            "created_at": interview.created_at,
             "responses": qa_list,
             **report_data,
         }, status=status.HTTP_200_OK)
@@ -396,11 +502,16 @@ class InterviewSerializer(serializers.ModelSerializer):
     id = serializers.CharField(read_only=True)
     job_title = serializers.CharField(source='job.title', read_only=True)
     candidate_email = serializers.CharField(source='candidate.email', read_only=True)
+    # candidate_name is a property on Interview — resolved from CandidateProfile
+    candidate_name = serializers.SerializerMethodField()
+
+    def get_candidate_name(self, obj):
+        return obj.candidate_name  # calls the @property
 
     class Meta:
         model = Interview
-        fields = ['id', 'job_title', 'candidate_email', 'status', 'ats_score', 'created_at', 'link1_expiry', 'candidate_name']
-        read_only_fields = ['id', 'job_title', 'candidate_email', 'ats_score', 'created_at', 'link1_expiry']
+        fields = ['id', 'job_title', 'candidate_email', 'candidate_name', 'status', 'ats_score', 'created_at', 'link1_expiry', 'skills', 'highlights', 'resume_text']
+        read_only_fields = ['id', 'job_title', 'candidate_email', 'candidate_name', 'ats_score', 'created_at', 'link1_expiry']
 
 class InterviewViewSet(viewsets.ModelViewSet):
     serializer_class = InterviewSerializer
@@ -421,23 +532,318 @@ class SubmitReviewView(APIView):
     def post(self, request):
         from .models import CandidateReview
         interview_id = request.data.get('interview_id')
-        
-        interview = None
-        if interview_id:
-            try:
-                interview = Interview.objects.get(id=interview_id, candidate=request.user)
-            except Interview.DoesNotExist:
-                pass
 
+        if not interview_id:
+            return Response({"error": "interview_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            interview = Interview.objects.get(id=interview_id, candidate=request.user)
+        except Interview.DoesNotExist:
+            return Response({"error": "Interview not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # candidate_email is no longer stored — resolved from interview.candidate FK
         review, _ = CandidateReview.objects.update_or_create(
-            candidate_email=request.user.email,
+            interview=interview,
             defaults={
-                'interview': interview,
-                'overall_experience': request.data.get('overall_experience'),
-                'ai_clarity': request.data.get('ai_clarity'),
-                'ease_of_use': request.data.get('ease_of_use'),
+                'overall_experience':  request.data.get('overall_experience'),
+                'ai_clarity':          request.data.get('ai_clarity'),
+                'ease_of_use':         request.data.get('ease_of_use'),
                 'technical_stability': request.data.get('technical_stability'),
-                'comment': request.data.get('comment', ''),
+                'comment':             request.data.get('comment', ''),
             }
         )
         return Response({"message": "Review submitted successfully"}, status=status.HTTP_201_CREATED)
+
+
+class DashboardStatsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if user.role != 'recruiter':
+            return Response({"error": "Only recruiters can view dashboard statistics."}, status=status.HTTP_403_FORBIDDEN)
+        
+        # 1. Total Jobs
+        total_jobs = Job.objects.filter(recruiter=user).count()
+
+        # 2. Total Candidates / Interviews
+        total_candidates = Interview.objects.filter(job__recruiter=user).count()
+
+        # 3. Active Interviews
+        active_interviews = Interview.objects.filter(
+            job__recruiter=user, 
+            status__in=['in_progress', 'scheduled', 'pending']
+        ).count()
+
+        # 4. Recent Activity
+        recent_interviews = Interview.objects.filter(job__recruiter=user).order_by('-created_at')[:10]
+        
+        activities = []
+        for interview in recent_interviews:
+            has_report = hasattr(interview, 'report')
+            name = interview.candidate_name or interview.candidate.email
+            
+            # Map status/type
+            if interview.status == 'completed':
+                score_str = f" scored {round(interview.report.overall_score)}%" if (has_report and interview.report.overall_score) else ""
+                desc = f"{name}{score_str} for the {interview.job.title} role."
+                title = "AI Interview Completed"
+                icon = "check_circle"
+                icon_color = "text-emerald-600"
+                icon_bg = "bg-emerald-50"
+            elif interview.status == 'in_progress':
+                desc = f"{name} is currently taking the interview for {interview.job.title}."
+                title = "Interview Started"
+                icon = "video_chat"
+                icon_color = "text-violet-600"
+                icon_bg = "bg-violet-50"
+            elif interview.status == 'malpractice':
+                desc = f"System warning: malpractice suspected for candidate {name}."
+                title = "System Warning"
+                icon = "warning"
+                icon_color = "text-amber-600"
+                icon_bg = "bg-amber-50"
+            else:
+                desc = f"Interview invite link generated and email sent to {name}."
+                title = "Interview Invited"
+                icon = "mail"
+                icon_color = "text-blue-600"
+                icon_bg = "bg-blue-50"
+
+            # Dynamic time display helper
+            diff = timezone.now() - interview.created_at
+            if diff.days == 0:
+                if diff.seconds < 3600:
+                    time_str = f"{max(1, diff.seconds // 60)} minutes ago"
+                else:
+                    time_str = f"{diff.seconds // 3600} hours ago"
+            elif diff.days == 1:
+                time_str = "Yesterday"
+            else:
+                time_str = f"{diff.days} days ago"
+
+            activities.append({
+                "title": title,
+                "detail": desc,
+                "time": time_str,
+                "icon": icon,
+                "iconColor": icon_color,
+                "iconBg": icon_bg
+            })
+
+        return Response({
+            "total_jobs": total_jobs,
+            "total_candidates": total_candidates,
+            "active_interviews": active_interviews,
+            "activities": activities
+        }, status=status.HTTP_200_OK)
+
+
+class ReportsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk=None):
+        user = request.user
+        if user.role != 'recruiter':
+            return Response({"error": "Only recruiters can view reports."}, status=status.HTTP_403_FORBIDDEN)
+        
+        from reports.models import Report
+
+        if pk:
+            try:
+                try:
+                    report = Report.objects.select_related('interview', 'interview__job', 'interview__candidate').get(
+                        interview_id=pk, 
+                        interview__job__recruiter=user
+                    )
+                except (Report.DoesNotExist, ValueError):
+                    report = Report.objects.select_related('interview', 'interview__job', 'interview__candidate').get(
+                        id=pk, 
+                        interview__job__recruiter=user
+                    )
+                
+                responses = InterviewResponse.objects.filter(interview=report.interview).order_by('question_index')
+                
+                transcript = []
+                for r in responses:
+                    t_str = r.timestamp.strftime('%I:%M %p') if r.timestamp else ""
+                    transcript.append({
+                        "id": f"q-{r.id}",
+                        "role": "ai",
+                        "text": r.question_text,
+                        "timestamp": t_str
+                    })
+                    transcript.append({
+                        "id": f"a-{r.id}",
+                        "role": "candidate",
+                        "text": r.answer_text,
+                        "timestamp": t_str
+                    })
+
+                def clean_list(text):
+                    if not text:
+                        return []
+                    items = []
+                    for line in text.split('\n'):
+                        line = line.strip().lstrip('-').lstrip('*').lstrip('1234567890.').strip()
+                        if line:
+                            items.append(line)
+                    return items
+
+                return Response({
+                    "id": str(report.interview.id),
+                    "candidate_name": report.interview.candidate_name or report.interview.candidate.email,
+                    "candidate_email": report.interview.candidate.email,
+                    "job_title": report.interview.job.title,
+                    "overall_score": report.overall_score,
+                    "overall_summary": report.overall_summary,
+                    "recommendation": report.recommendation,
+                    "strengths": clean_list(report.strengths),
+                    "weaknesses": clean_list(report.weaknesses),
+                    "transcript": transcript,
+                    "pdf_url": report.pdf_s3_url,
+                    "created_at": report.created_at.strftime('%Y-%m-%d')
+                }, status=status.HTTP_200_OK)
+            except Report.DoesNotExist:
+                return Response({"error": "Report not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        else:
+            reports = Report.objects.select_related('interview', 'interview__job', 'interview__candidate').filter(
+                interview__job__recruiter=user
+            ).order_by('-created_at')
+            
+            reports_list = []
+            for r in reports:
+                score = r.overall_score or 0
+                if score >= 85:
+                    match_tier = "Expert Match"
+                elif score >= 70:
+                    match_tier = "Strong Match"
+                elif score >= 50:
+                    match_tier = "Good Match"
+                else:
+                    match_tier = "Low Match"
+
+                reports_list.append({
+                    "id": str(r.interview.id),
+                    "name": r.interview.candidate_name or r.interview.candidate.email,
+                    "email": r.interview.candidate.email,
+                    "role": r.interview.job.title,
+                    "score": score,
+                    "match": match_tier,
+                    "status": r.recommendation or "Maybe",
+                    "created_at": r.created_at.strftime('%Y-%m-%d')
+                })
+            
+            return Response(reports_list, status=status.HTTP_200_OK)
+
+    def post(self, request, pk):
+        user = request.user
+        if user.role != 'recruiter':
+            return Response({"error": "Only recruiters can update candidate status."}, status=status.HTTP_403_FORBIDDEN)
+        
+        status_value = request.data.get('status')
+        # Map frontend actions 'hire' -> 'shortlisted', 'reject' -> 'rejected'
+        if status_value == 'hire':
+            status_value = 'shortlisted'
+        elif status_value == 'reject':
+            status_value = 'rejected'
+
+        if status_value not in ['shortlisted', 'rejected', 'on_hold', 'pending']:
+            return Response({"error": "Invalid status value"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            interview = Interview.objects.get(id=pk, job__recruiter=user)
+            interview.status = status_value
+            interview.save()
+            
+            # Send notification email to candidate
+            try:
+                from notifications.utils import send_candidate_accepted_email, send_candidate_rejected_email
+                candidate_user = interview.candidate
+                job_title = interview.job.title if interview.job else "the position"
+                name = interview.candidate_name
+                
+                if status_value == 'shortlisted':
+                    send_candidate_accepted_email(candidate_user, job_title, name)
+                elif status_value == 'rejected':
+                    send_candidate_rejected_email(candidate_user, job_title, name)
+            except Exception as e:
+                print(f"Error sending status update email: {e}")
+
+            return Response({"message": f"Candidate status updated to {status_value}."})
+        except Interview.DoesNotExist:
+            return Response({"error": "Interview not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class LiveMonitoringDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, session_token):
+        user = request.user
+        if user.role != 'recruiter':
+            return Response({"error": "Only recruiters can monitor live interviews."}, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            from django.db.models import Q
+            try:
+                interview_id = int(session_token)
+                query = Q(id=interview_id) | Q(session_token=session_token)
+            except ValueError:
+                query = Q(session_token=session_token)
+                
+            interview = Interview.objects.select_related('job', 'candidate').get(
+                query,
+                job__recruiter=user
+            )
+            
+            responses = InterviewResponse.objects.filter(interview=interview).order_by('question_index')
+            
+            messages = []
+            for r in responses:
+                t_str = r.timestamp.strftime('%I:%M %p') if r.timestamp else ""
+                messages.append({
+                    "id": f"q-{r.id}",
+                    "role": "ai",
+                    "text": r.question_text,
+                    "timestamp": t_str
+                })
+                messages.append({
+                    "id": f"a-{r.id}",
+                    "role": "candidate",
+                    "text": r.answer_text,
+                    "timestamp": t_str
+                })
+            
+            total_responses = responses.count()
+            if total_responses > 0:
+                avg_relevance = sum(r.relevance_score or 0 for r in responses) / total_responses
+                avg_accuracy = sum(r.accuracy_score or 0 for r in responses) / total_responses
+                avg_clarity = sum(r.clarity_score or 0 for r in responses) / total_responses
+            else:
+                avg_relevance = 80.0
+                avg_accuracy = 80.0
+                avg_clarity = 80.0
+
+            scores = {
+                "technical": round(avg_accuracy),
+                "communication": round(avg_clarity),
+                "confidence": round(avg_relevance),
+                "problem_solving": round(avg_accuracy),
+                "behavioral": round(avg_relevance)
+            }
+
+            return Response({
+                "interview_id": str(interview.id),
+                "candidate_name": interview.candidate_name or interview.candidate.email,
+                "candidate_email": interview.candidate.email,
+                "job_title": interview.job.title if interview.job else "Unknown Role",
+                "match_score": interview.ats_score,
+                "status": interview.status,
+                "progress": total_responses,
+                "messages": messages,
+                "scores": scores
+            }, status=status.HTTP_200_OK)
+            
+        except Interview.DoesNotExist:
+            return Response({"error": "Interview session not found"}, status=status.HTTP_404_NOT_FOUND)

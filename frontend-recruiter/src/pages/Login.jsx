@@ -35,6 +35,9 @@ export default function Login() {
         localStorage.setItem('access', data.access);
         localStorage.setItem('refresh', data.refresh);
         localStorage.setItem('role', userRole);
+        if (data.user && data.user.email) {
+          localStorage.setItem('email', data.user.email);
+        }
         navigate('/dashboard');
       } else {
         setMessage({ type: 'error', text: data.detail || 'Invalid credentials.' });

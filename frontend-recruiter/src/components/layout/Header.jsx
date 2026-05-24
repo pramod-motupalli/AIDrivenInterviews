@@ -1,6 +1,40 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+
 export default function Header() {
+  const [hasUnread, setHasUnread] = useState(false);
+
+  useEffect(() => {
+    const checkUnread = async () => {
+      try {
+        const token = localStorage.getItem('access');
+        const res = await fetch(`${API_BASE}/interviews/reports/`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const reports = await res.json();
+          const readIds = JSON.parse(localStorage.getItem('read_notification_ids') || '[]');
+          const deletedIds = JSON.parse(localStorage.getItem('deleted_notification_ids') || '[]');
+          
+          const activeUnread = reports.some(r => !deletedIds.includes(r.id) && !readIds.includes(r.id));
+          setHasUnread(activeUnread);
+        }
+      } catch (err) {
+        console.error("Failed to check unread notifications count", err);
+      }
+    };
+
+    checkUnread();
+    
+    // Check every 15 seconds to keep it dynamic and fresh
+    const interval = setInterval(checkUnread, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <header className="h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] lg:h-14 lg:pt-0 flex items-center justify-between lg:justify-end gap-3 px-4 md:px-6 bg-white border-b border-gray-200 w-full flex-shrink-0 z-40 transition-all">
       {/* Mobile Logo */}
@@ -17,7 +51,9 @@ export default function Header() {
           className="relative cursor-pointer p-2 -m-1 text-gray-600 hover:text-gray-900 transition-all hover:bg-gray-50 rounded-full active:scale-95 flex items-center justify-center"
         >
           <span className="material-symbols-outlined text-[22px] lg:text-[20px]">notifications</span>
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+          {hasUnread && (
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+          )}
         </Link>
 
         {/* Profile / Avatar */}

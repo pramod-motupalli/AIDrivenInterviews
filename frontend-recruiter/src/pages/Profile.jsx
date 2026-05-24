@@ -1,19 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
 export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Profile Information State
   const [profile, setProfile] = useState({
-    fullName: 'Alex Thompson',
-    email: 'alex.thompson@company.com',
-    role: 'Senior Technical Recruiter',
-    company: 'TechFlow Inc.',
-    phone: '+1 (555) 0123-4567',
-    location: 'San Francisco, CA',
+    fullName: '',
+    email: localStorage.getItem('email') || '',
+    role: '',
+    company: '',
+    department: '',
+    phone: '',
+    location: '',
   });
+
+  // Dynamic initials avatar
+  const getInitials = (name) => {
+    if (!name) return '?';
+    return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  };
 
   // Preferences State
   const [preferences, setPreferences] = useState({
@@ -34,32 +44,36 @@ export default function Profile() {
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
-  const handlePasswordChangeSubmit = (e) => {
-    e.preventDefault();
-    setPasswordError('');
-    setPasswordSuccess(false);
+  useEffect(() => {
+    const fetchProfile = async () => {
+      setIsLoading(true);
+      try {
+        const token = localStorage.getItem('access');
+        const res = await fetch(`${API_BASE}/auth/me/`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.email) localStorage.setItem('email', data.email);
+          setProfile({
+            fullName:   data.full_name    || '',
+            email:      data.email        || localStorage.getItem('email') || '',
+            role:       data.title        || '',
+            company:    data.company_name || '',
+            department: data.department   || '',
+            phone:      data.phone ? String(data.phone) : '',
+            location:   data.location     || '',
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load user profile', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
 
-    if (passwordForm.new.length < 8) {
-      setPasswordError('New password must be at least 8 characters long.');
-      return;
-    }
-    if (passwordForm.new !== passwordForm.confirm) {
-      setPasswordError('New password and confirm password do not match.');
-      return;
-    }
-
-    setIsChangingPassword(true);
-    // Simulate password change API call
-    setTimeout(() => {
-      setIsChangingPassword(false);
-      setPasswordSuccess(true);
-      setPasswordForm({ current: '', new: '', confirm: '' });
-      setTimeout(() => {
-        setPasswordSuccess(false);
-        setShowChangePasswordModal(false);
-      }, 2000);
-    }, 1200);
-  };
 
   const handleProfileChange = (e) => {
     const { name, value } = e.target;
@@ -71,16 +85,163 @@ export default function Profile() {
     setPreferences(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    // --- Optimistic update: apply values to UI immediately ---
+    const optimisticProfile = { ...profile };
+    setProfile(optimisticProfile);
+    setIsEditing(false);
+    setShowSuccess(true);
+    setTimeout(() => setShowSuccess(false), 3000);
+
     setIsSaving(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const token = localStorage.getItem('access');
+      const res = await fetch(`${API_BASE}/auth/me/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          full_name:    profile.fullName,
+          title:        profile.role,
+          company_name: profile.company,
+          department:   profile.department,
+          phone:        profile.phone ? parseInt(profile.phone, 10) : null,
+          location:     profile.location,
+        })
+      });
+      if (res.ok) {
+        // Reconcile with the authoritative server response
+        const data = await res.json();
+        setProfile(prev => ({
+          ...prev,
+          fullName:   data.full_name    || '',
+          role:       data.title        || '',
+          company:    data.company_name || '',
+          department: data.department   || '',
+          phone:      data.phone ? String(data.phone) : '',
+          location:   data.location     || '',
+        }));
+      } else {
+        // Revert to server state if save failed
+        console.error('Profile save failed:', res.status);
+      }
+    } catch (err) {
+      console.error('Failed to update profile', err);
+    } finally {
       setIsSaving(false);
-      setIsEditing(false);
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
-    }, 1000);
+    }
   };
+
+  const handlePasswordChangeSubmit = async (e) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess(false);
+
+    if (passwordForm.new !== passwordForm.confirm) {
+      setPasswordError("New passwords do not match");
+      return;
+    }
+    if (passwordForm.new.length < 8) {
+      setPasswordError("New password must be at least 8 characters");
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const token = localStorage.getItem('access');
+      const res = await fetch(`${API_BASE}/auth/change-password/`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          current_password: passwordForm.current,
+          new_password: passwordForm.new
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setPasswordSuccess(true);
+        setPasswordForm({ current: '', new: '', confirm: '' });
+        setTimeout(() => {
+          setShowChangePasswordModal(false);
+          setPasswordSuccess(false);
+        }, 2000);
+      } else {
+        setPasswordError(data.error || "Failed to change password");
+      }
+    } catch (err) {
+      setPasswordError("A network error occurred. Please try again.");
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="max-w-5xl mx-auto space-y-8 pb-12 animate-pulse">
+        {/* Page Title */}
+        <div>
+          <div className="h-8 bg-gray-200 rounded-lg w-48"></div>
+          <div className="h-4 bg-gray-200 rounded-lg w-80 mt-2"></div>
+        </div>
+
+        {/* 1. TOP PROFILE SUMMARY CARD */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 md:p-6 flex flex-col md:flex-row items-center md:items-start gap-6">
+          <div className="h-24 w-24 bg-gray-200 rounded-2xl shrink-0"></div>
+          <div className="flex-1 space-y-3 w-full pt-2">
+            <div className="h-6 bg-gray-200 rounded-lg w-2/3 md:w-1/3"></div>
+            <div className="h-4 bg-gray-200 rounded-lg w-1/2 md:w-1/4"></div>
+            <div className="flex gap-4 pt-2">
+              <div className="h-4 bg-gray-200 rounded-lg w-24"></div>
+              <div className="h-4 bg-gray-200 rounded-lg w-24"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* MAIN GRID LAYOUT */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* LEFT COLUMN */}
+          <div className="lg:col-span-2 space-y-8">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100 h-14 bg-gray-50 flex items-center">
+                <div className="h-4 bg-gray-200 rounded-lg w-36"></div>
+              </div>
+              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="h-3 bg-gray-200 rounded-lg w-20"></div>
+                    <div className="h-10 bg-gray-100/80 rounded-lg w-full"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN */}
+          <div className="space-y-8">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100 h-14 bg-gray-50 flex items-center">
+                <div className="h-4 bg-gray-200 rounded-lg w-24"></div>
+              </div>
+              <div className="p-6 space-y-6">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="h-4 bg-gray-200 rounded-lg w-1/3"></div>
+                    <div className="h-4 bg-gray-100/80 rounded-lg w-2/3"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-12 relative animate-in fade-in duration-300">
@@ -103,30 +264,26 @@ export default function Profile() {
       {/* 1. TOP PROFILE SUMMARY CARD */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 md:p-6 flex flex-col md:flex-row items-center md:items-start gap-6">
         <div className="relative group shrink-0">
-          <div className="h-24 w-24 rounded-2xl overflow-hidden border border-gray-100 shadow-sm bg-gray-50">
-            <img 
-              alt="Profile avatar" 
-              className="w-full h-full object-cover" 
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDmvBX-647LA6O6SIxndP35O-gyyWWjhbQDE5zZU-AprQZijFLPhOU7d6TNzZLX7MA5S1pXbrPZNawPbMdwUMhudKoaKDHiR-liCZ9yCDmQw6JNMy6Qqw8152Ym-mQ6VOnCKm3EUgkExjSXurU23AFGCfDgynLfxUYMKyNWlYWS-EfTjZjYEzKNNiiX8OpSW4oIfQ3okofRLPTOHLrbRrQQIHivtX0-8vbQIaKshHJDeKENclpRaQafLg5vnppQpf9cuifRg_PaqxE" 
-            />
+          <div className="h-24 w-24 rounded-2xl overflow-hidden border border-gray-100 shadow-sm bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center">
+            <span className="text-white text-2xl font-bold select-none">{getInitials(profile.fullName)}</span>
           </div>
-          {/* Change Avatar Button */}
-          <button className="absolute -bottom-2 -right-2 bg-white p-1.5 rounded-lg border border-gray-200 shadow-sm text-gray-500 hover:text-gray-900 transition-colors">
-            <span className="material-symbols-outlined text-[16px]">photo_camera</span>
-          </button>
         </div>
 
         <div className="flex-1 text-center md:text-left space-y-1.5">
-          <h2 className="text-xl font-bold text-gray-900 leading-tight">{profile.fullName}</h2>
-          <p className="text-sm font-medium text-gray-600">{profile.role} at {profile.company}</p>
+          <h2 className="text-xl font-bold text-gray-900 leading-tight">
+            {profile.fullName || 'New Recruiter (Please fill details)'}
+          </h2>
+          <p className="text-sm font-medium text-gray-600">
+            {profile.role || 'Role not set'} at {profile.company || 'Company not set'}
+          </p>
           <div className="flex flex-wrap justify-center md:justify-start items-center gap-x-4 gap-y-2 pt-2 text-xs text-gray-500">
             <div className="flex items-center gap-1.5">
               <span className="material-symbols-outlined text-[16px] text-gray-400">mail</span>
-              {profile.email}
+              {profile.email || 'Email not set'}
             </div>
             <div className="flex items-center gap-1.5">
               <span className="material-symbols-outlined text-[16px] text-gray-400">location_on</span>
-              {profile.location}
+              {profile.location || 'Location not set'}
             </div>
           </div>
         </div>
@@ -158,7 +315,7 @@ export default function Profile() {
             </div>
             <div className="p-4 md:p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-1.5">
+                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-gray-500">Full Name</label>
                   <input 
                     type="text" 
@@ -166,18 +323,20 @@ export default function Profile() {
                     value={profile.fullName}
                     onChange={handleProfileChange}
                     disabled={!isEditing}
+                    placeholder="ex: Alex Thompson"
                     className={`w-full px-3 py-2 border rounded-lg text-sm transition-all focus:outline-none ${isEditing ? 'bg-white border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500' : 'bg-gray-50 text-gray-600 border-gray-200'}`}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-gray-500">Email Address</label>
+                  <label className="text-xs font-semibold text-gray-500">Email Address (Registered)</label>
                   <input 
                     type="email" 
                     name="email"
                     value={profile.email}
-                    onChange={handleProfileChange}
-                    disabled={!isEditing}
-                    className={`w-full px-3 py-2 border rounded-lg text-sm transition-all focus:outline-none ${isEditing ? 'bg-white border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500' : 'bg-gray-50 text-gray-600 border-gray-200'}`}
+                    disabled={true}
+                    placeholder="ex: alex.thompson@company.com"
+                    className="w-full px-3 py-2 border rounded-lg text-sm transition-all focus:outline-none bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed"
+                    title="Registered email address cannot be changed."
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -188,6 +347,7 @@ export default function Profile() {
                     value={profile.phone}
                     onChange={handleProfileChange}
                     disabled={!isEditing}
+                    placeholder="ex: 9876543210"
                     className={`w-full px-3 py-2 border rounded-lg text-sm transition-all focus:outline-none ${isEditing ? 'bg-white border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500' : 'bg-gray-50 text-gray-600 border-gray-200'}`}
                   />
                 </div>
@@ -199,6 +359,7 @@ export default function Profile() {
                     value={profile.location}
                     onChange={handleProfileChange}
                     disabled={!isEditing}
+                    placeholder="ex: San Francisco, CA"
                     className={`w-full px-3 py-2 border rounded-lg text-sm transition-all focus:outline-none ${isEditing ? 'bg-white border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500' : 'bg-gray-50 text-gray-600 border-gray-200'}`}
                   />
                 </div>
@@ -210,6 +371,7 @@ export default function Profile() {
                     value={profile.company}
                     onChange={handleProfileChange}
                     disabled={!isEditing}
+                    placeholder="ex: TechFlow Inc."
                     className={`w-full px-3 py-2 border rounded-lg text-sm transition-all focus:outline-none ${isEditing ? 'bg-white border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500' : 'bg-gray-50 text-gray-600 border-gray-200'}`}
                   />
                 </div>
@@ -221,6 +383,19 @@ export default function Profile() {
                     value={profile.role}
                     onChange={handleProfileChange}
                     disabled={!isEditing}
+                    placeholder="ex: Senior Technical Recruiter"
+                    className={`w-full px-3 py-2 border rounded-lg text-sm transition-all focus:outline-none ${isEditing ? 'bg-white border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500' : 'bg-gray-50 text-gray-600 border-gray-200'}`}
+                  />
+                </div>
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-xs font-semibold text-gray-500">Department</label>
+                  <input 
+                    type="text" 
+                    name="department"
+                    value={profile.department}
+                    onChange={handleProfileChange}
+                    disabled={!isEditing}
+                    placeholder="ex: Human Resources"
                     className={`w-full px-3 py-2 border rounded-lg text-sm transition-all focus:outline-none ${isEditing ? 'bg-white border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500' : 'bg-gray-50 text-gray-600 border-gray-200'}`}
                   />
                 </div>

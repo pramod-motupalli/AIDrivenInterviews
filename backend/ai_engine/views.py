@@ -55,11 +55,11 @@ class ScreeningProcessView(APIView):
             print("DEBUG: Saving metadata to Supabase DB...")
             candidate_info = result.get('candidate_details', {})
             metadata = {
-                "candidate_name": candidate_info.get('name', candidate_name),
+                "candidate_name":  candidate_info.get('name', candidate_name),
                 "candidate_email": candidate_info.get('email', candidate_email),
-                "recruiter_email": recruiter_email,
-                "jd_url": jd_url,
-                "resume_url": resume_url
+                "recruiter_id":    str(request.user.id),   # normalised: store ID not email
+                "jd_url":          jd_url,
+                "resume_url":      resume_url
             }
             supabase_service.save_screening_metadata(metadata)
             

@@ -77,43 +77,43 @@ const SystemCheck = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex justify-center p-6 lg:p-12 overflow-y-auto">
-        <div className="w-full max-w-[1200px] grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <main className="flex-1 flex justify-center p-4 sm:p-6 lg:p-12 overflow-y-auto">
+        <div className="w-full max-w-[1200px] grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
           
           {/* Left: Video Preview Card */}
-          <div className="lg:col-span-7 bg-white rounded-[32px] border border-slate-200/60 overflow-hidden shadow-xl shadow-slate-200/40">
+          <div className="lg:col-span-7 bg-white rounded-2xl sm:rounded-[32px] border border-slate-200/60 overflow-hidden shadow-xl shadow-slate-200/40">
             <div className="relative bg-slate-950 aspect-video w-full overflow-hidden">
               <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
               
-              <div className="absolute top-4 left-4 flex flex-wrap gap-2">
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/60 backdrop-blur-md border border-white/10 text-[10px] font-bold text-white uppercase tracking-wider">
+              <div className="absolute top-3 left-3 sm:top-4 sm:left-4 flex flex-wrap gap-2">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl bg-slate-900/60 backdrop-blur-md border border-white/10 text-[9px] sm:text-[10px] font-bold text-white uppercase tracking-wider">
                   <div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444] animate-pulse" />
                   Live Preview
                 </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-green-500/10 backdrop-blur-md border border-green-500/20 text-[10px] font-bold text-green-400 uppercase tracking-wider">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl bg-green-500/10 backdrop-blur-md border border-green-500/20 text-[9px] sm:text-[10px] font-bold text-green-400 uppercase tracking-wider">
                   <Wifi size={12} />
                   Stable Connection
                 </div>
               </div>
 
-              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-3">
-                <button className="w-12 h-12 rounded-full bg-white/15 backdrop-blur-xl border border-white/20 text-white flex items-center justify-center hover:bg-white/25 transition-all active:scale-95 shadow-lg">
-                  <Mic size={20} />
+              <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 flex gap-2 sm:gap-3">
+                <button className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/15 backdrop-blur-xl border border-white/20 text-white flex items-center justify-center hover:bg-white/25 transition-all active:scale-95 shadow-lg min-w-[40px] min-h-[40px]">
+                  <Mic size={18} />
                 </button>
-                <button className="w-12 h-12 rounded-full bg-white/15 backdrop-blur-xl border border-white/20 text-white flex items-center justify-center hover:bg-white/25 transition-all active:scale-95 shadow-lg">
-                  <Video size={20} />
+                <button className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/15 backdrop-blur-xl border border-white/20 text-white flex items-center justify-center hover:bg-white/25 transition-all active:scale-95 shadow-lg min-w-[40px] min-h-[40px]">
+                  <Video size={18} />
                 </button>
               </div>
             </div>
 
-            <div className="p-8 flex items-center gap-5">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center border-2 border-white shadow-sm flex-shrink-0">
-                <span className="text-lg font-black text-blue-600">{displayInitials}</span>
+            <div className="p-5 sm:p-8 flex items-center gap-4 sm:gap-5">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center border-2 border-white shadow-sm flex-shrink-0">
+                <span className="text-base sm:text-lg font-black text-blue-600">{displayInitials}</span>
               </div>
               <div className="min-w-0">
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Your Interviewer</div>
-                <div className="text-lg font-extrabold text-slate-900 truncate">{recruiterName}</div>
-                <div className="text-sm font-medium text-slate-500 truncate">Talent Acquisition</div>
+                <div className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Your Interviewer</div>
+                <div className="text-base sm:text-lg font-extrabold text-slate-900 truncate">{recruiterName}</div>
+                <div className="text-xs sm:text-sm font-medium text-slate-500 truncate">Talent Acquisition</div>
               </div>
             </div>
           </div>

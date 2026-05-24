@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   EmptyCard, 
   SelectedCard, 
@@ -12,7 +12,7 @@ import CandidateDeepView from '@/components/candidates/CandidateDeepView';
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
 export default function Jobs() {
-  const [activeTab, setActiveTab] = useState('screen'); // 'screen' or 'pipeline'
+  const [activeTab, setActiveTab] = useState('pipeline'); // 'screen' or 'pipeline'
   const [jdFile, setJdFile] = useState(null);
   const [resumeFile, setResumeFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -37,44 +37,71 @@ export default function Jobs() {
     const saved = localStorage.getItem('screened_candidates');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        return parsed.filter(c => !String(c.id).startsWith('mock-'));
       } catch (e) {
         console.error(e);
       }
     }
-    return [
-      {
-        id: 'mock-1',
-        name: 'Sarah Jenkins',
-        email: 'sarah.jenkins@gmail.com',
-        ats_score: 92,
-        screened_at: '2 hours ago',
-        job_title: 'Senior UX Designer',
-        highlights: ['5+ years UI/UX experience', 'Figma design system expert', 'Led rebranding for SaaS startups'],
-        skills: ['Figma', 'User Research', 'Prototyping', 'Design Systems'],
-        job_config: {
-          title: 'Senior UX Designer',
-          department: 'Design',
-          skills: ['Figma', 'User Research', 'Design Systems']
-        }
-      },
-      {
-        id: 'mock-2',
-        name: 'Alex Rivera',
-        email: 'alex.rivera@techcorp.io',
-        ats_score: 88,
-        screened_at: 'Yesterday',
-        job_title: 'Full-Stack Developer',
-        highlights: ['Proficient in React & Node.js', 'Experience with PostgreSQL & AWS', 'Built real-time messaging apps'],
-        skills: ['React.js', 'Node.js', 'PostgreSQL', 'AWS', 'WebSockets'],
-        job_config: {
-          title: 'Full-Stack Developer',
-          department: 'Engineering',
-          skills: ['React.js', 'Node.js', 'AWS']
-        }
-      }
-    ];
+    return [];
   });
+
+  useEffect(() => {
+    const fetchCandidates = async () => {
+      try {
+        const token = localStorage.getItem('access');
+        const res = await fetch(`${API_BASE}/interviews/interviews/`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const mapped = data.map(item => ({
+            id: item.id,
+            name: item.candidate_name || item.candidate_email,
+            email: item.candidate_email,
+            ats_score: Math.round(item.ats_score || 0),
+            screened_at: new Date(item.created_at).toLocaleDateString(),
+            job_title: item.job_title,
+            skills: item.skills || [],
+            highlights: item.highlights || [],
+            resume_text: item.resume_text,
+            status: item.status === 'pending' ? 'Interview Pending' : 
+                    item.status === 'in_progress' ? 'Interview In Progress' :
+                    item.status === 'completed' ? 'Interview Completed' : item.status,
+            session_token: item.session_token
+          }));
+          
+          let localCandidates = JSON.parse(localStorage.getItem('screened_candidates') || '[]');
+          localCandidates = localCandidates.filter(c => !String(c.id).startsWith('mock-'));
+          
+          // Create a map of API candidates by email for easy lookup
+          const apiCandidateMap = new Map();
+          mapped.forEach(c => apiCandidateMap.set(c.email, c));
+
+          // Merge: For each local candidate, if they exist in API, use API data (to get updated status), else keep local
+          const mergedList = localCandidates.map(localCand => {
+            if (apiCandidateMap.has(localCand.email)) {
+              const apiCand = apiCandidateMap.get(localCand.email);
+              apiCandidateMap.delete(localCand.email); // Remove from map so we don't add it twice
+              return { ...localCand, ...apiCand };
+            }
+            return localCand;
+          });
+
+          // Add any remaining API candidates that weren't in local storage
+          const finalList = [...Array.from(apiCandidateMap.values()), ...mergedList];
+          
+          setScreenedList(finalList);
+          localStorage.setItem('screened_candidates', JSON.stringify(finalList));
+        }
+      } catch (err) {
+        console.error("Error fetching candidates:", err);
+      }
+    };
+    fetchCandidates();
+  }, []);
 
 
   const handleUpload = async () => {
@@ -196,20 +223,21 @@ export default function Jobs() {
       });
 
       if (res.ok) {
+        const data = await res.json();
         setMessage({ type: 'success', text: `✅ Interview link sent to ${candidate.email}` });
         
-        // Update both list and detail statuses
+        // Update both list and detail statuses to include the real session_token
         const updatedList = screenedList.map(c => 
-          c.id === candidate.id ? { ...c, status: 'Interview Pending' } : c
+          c.id === candidate.id ? { ...c, status: 'Interview Pending', session_token: data.session_token } : c
         );
         setScreenedList(updatedList);
         localStorage.setItem('screened_candidates', JSON.stringify(updatedList));
 
         if (analysisResult && analysisResult.id === candidate.id) {
-          setAnalysisResult(prev => ({ ...prev, status: 'Interview Pending' }));
+          setAnalysisResult(prev => ({ ...prev, status: 'Interview Pending', session_token: data.session_token }));
         }
         if (selectedCandidate && selectedCandidate.id === candidate.id) {
-          setSelectedCandidate(prev => ({ ...prev, status: 'Interview Pending' }));
+          setSelectedCandidate(prev => ({ ...prev, status: 'Interview Pending', session_token: data.session_token }));
         }
       } else {
         const data = await res.json();
@@ -226,16 +254,32 @@ export default function Jobs() {
     setCandidateToDelete(cand);
   };
 
-  const handlePerformDelete = (id) => {
+  const handlePerformDelete = async (cand) => {
     setCandidateToDelete(null);
-    setDeletingId(id);
+    setDeletingId(cand.id);
     
-    setTimeout(() => {
-      const updatedList = screenedList.filter(c => c.id !== id);
-      setScreenedList(updatedList);
-      localStorage.setItem('screened_candidates', JSON.stringify(updatedList));
+    try {
+      const token = localStorage.getItem('access');
+      const res = await fetch(`${API_BASE}/interviews/candidate/?email=${encodeURIComponent(cand.email)}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const updatedList = screenedList.filter(c => c.id !== cand.id);
+        setScreenedList(updatedList);
+        localStorage.setItem('screened_candidates', JSON.stringify(updatedList));
+        alert("Candidate and associated data deleted successfully.");
+      } else {
+        alert("Failed to delete candidate from server.");
+      }
+    } catch (err) {
+      console.error("Failed to delete candidate:", err);
+      alert("Error deleting candidate from server.");
+    } finally {
       setDeletingId(null);
-    }, 300);
+    }
   };
 
   return (
@@ -635,7 +679,7 @@ export default function Jobs() {
                 Cancel
               </button>
               <button
-                onClick={() => handlePerformDelete(candidateToDelete.id)}
+                onClick={() => handlePerformDelete(candidateToDelete)}
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-lg shadow-red-100 transition-colors cursor-pointer"
               >
                 Delete Candidate

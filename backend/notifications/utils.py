@@ -23,15 +23,11 @@ def send_html_email(subject, template_name, context, recipient_list):
         print(f"[EMAIL DEBUG] Invite Link:     {context.get('invite_link', 'N/A')}")
         print(f"{'='*60}\n")
 
-    class EmailThread(threading.Thread):
-        def run(self):
-            try:
-                email.send()
-                print(f"[EMAIL] Successfully sent '{subject}' to {recipient_list}")
-            except Exception as e:
-                print(f"[EMAIL ERROR] Failed to send '{subject}' to {recipient_list}: {e}")
-
-    EmailThread().start()
+    try:
+        email.send()
+        print(f"[EMAIL] Successfully sent '{subject}' to {recipient_list}")
+    except Exception as e:
+        print(f"[EMAIL ERROR] Failed to send '{subject}' to {recipient_list}: {e}")
 
 def send_approval_email(user):
     """Send approval email to a recruiter whose account has been approved."""
@@ -99,3 +95,30 @@ def send_candidate_completion_email(user, password):
         },
         recipient_list=[user.email]
     )
+
+def send_candidate_accepted_email(user, job_title, candidate_name=None):
+    """Send email to candidate when recruiter accepts them."""
+    name = candidate_name or user.email.split('@')[0]
+    send_html_email(
+        subject=f"Congratulations! Next Steps for the {job_title} Position",
+        template_name="emails/candidate_accepted.html",
+        context={
+            'name': name,
+            'job_title': job_title,
+        },
+        recipient_list=[user.email]
+    )
+
+def send_candidate_rejected_email(user, job_title, candidate_name=None):
+    """Send email to candidate when recruiter rejects them."""
+    name = candidate_name or user.email.split('@')[0]
+    send_html_email(
+        subject=f"Update regarding your application for {job_title}",
+        template_name="emails/candidate_rejected.html",
+        context={
+            'name': name,
+            'job_title': job_title,
+        },
+        recipient_list=[user.email]
+    )
+

@@ -63,6 +63,7 @@ class SupabaseService:
     def save_screening_metadata(self, data: dict):
         """
         Saves screening metadata to the 'screenings' table.
+        Expected keys: candidate_name, candidate_email, recruiter_id, jd_url, resume_url
         """
         if "dummy.supabase.co" in self.url:
             print("DEBUG: Bypassing Supabase DB insert (dummy credentials detected).")

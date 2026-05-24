@@ -1,82 +1,137 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
-const INITIAL_NOTIFICATIONS = [
-  {
-    id: 1,
-    title: 'AI Screening High Match',
-    detail: 'Jordan Devereaux scored 94% match for the Senior Full-Stack Engineer role.',
-    time: '10 mins ago',
-    type: 'alert',
-    unread: true,
-    icon: 'star',
-    iconColor: 'text-amber-600',
-    iconBg: 'bg-amber-50',
-  },
-  {
-    id: 2,
-    title: 'AI Interview Completed',
-    detail: 'Alex Rivera completed the Senior UX Designer interview. Score: 92%',
-    time: '2 hours ago',
-    type: 'info',
-    unread: true,
-    icon: 'check_circle',
-    iconColor: 'text-emerald-600',
-    iconBg: 'bg-emerald-50',
-  },
-  {
-    id: 3,
-    title: 'System Anomaly Detected',
-    detail: 'Candidate Mark Thompson was flagged for abnormal window switching behavior.',
-    time: '5 hours ago',
-    type: 'alert',
-    unread: true,
-    icon: 'warning',
-    iconColor: 'text-red-600',
-    iconBg: 'bg-red-50',
-  },
-  {
-    id: 4,
-    title: 'New Candidate Applied',
-    detail: 'Sarah Chen applied for the Product Manager role.',
-    time: '1 day ago',
-    type: 'info',
-    unread: false,
-    icon: 'person_add',
-    iconColor: 'text-blue-600',
-    iconBg: 'bg-blue-50',
-  },
-  {
-    id: 5,
-    title: 'Job Successfully Created',
-    detail: 'Technical Lead is now live on the jobs board.',
-    time: '2 days ago',
-    type: 'info',
-    unread: false,
-    icon: 'campaign',
-    iconColor: 'text-violet-600',
-    iconBg: 'bg-violet-50',
-  },
-];
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
 export default function Notifications() {
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
 
+  useEffect(() => {
+    const fetchNotificationsData = async () => {
+      try {
+        const token = localStorage.getItem('access');
+        const [reportsRes, interviewsRes] = await Promise.all([
+          fetch(`${API_BASE}/interviews/reports/`, { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch(`${API_BASE}/interviews/interviews/`, { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
+        
+        // Load read and deleted ids from localStorage to persist user actions
+        const readIds = JSON.parse(localStorage.getItem('read_notification_ids') || '[]');
+        const deletedIds = JSON.parse(localStorage.getItem('deleted_notification_ids') || '[]');
+        
+        let allNotifications = [];
+
+        if (reportsRes.ok) {
+          const reports = await reportsRes.json();
+          // Map reports to in-app notifications dynamically
+          const mappedReports = reports
+            .filter(r => !deletedIds.includes(r.id))
+            .map(r => {
+              const isHighMatch = r.score >= 85;
+              const isLowMatch = r.score < 50;
+              
+              let title = 'AI Interview Completed';
+              let icon = 'check_circle';
+              let iconColor = 'text-emerald-600';
+              let iconBg = 'bg-emerald-50';
+              
+              if (isHighMatch) {
+                title = 'AI Screening High Match';
+                icon = 'star';
+                iconColor = 'text-amber-600';
+                iconBg = 'bg-amber-50';
+              } else if (isLowMatch) {
+                title = 'AI Screening Low Match';
+                icon = 'warning';
+                iconColor = 'text-red-600';
+                iconBg = 'bg-red-50';
+              }
+
+              return {
+                id: r.id,
+                title: title,
+                detail: `${r.name} completed the ${r.role} interview. Score: ${r.score}%`,
+                time: r.created_at || 'Recently',
+                unread: !readIds.includes(r.id),
+                icon: icon,
+                iconColor: iconColor,
+                iconBg: iconBg,
+              };
+            });
+            allNotifications = [...allNotifications, ...mappedReports];
+        }
+
+        if (interviewsRes.ok) {
+          const interviews = await interviewsRes.json();
+          const inProgress = interviews.filter(i => i.status === 'in_progress');
+          const mappedInProgress = inProgress.map(i => {
+            const notifId = `started-${i.id}`;
+            if (deletedIds.includes(notifId)) return null;
+            return {
+              id: notifId,
+              title: 'Interview Started',
+              detail: `${i.candidate_name || i.candidate_email} has started the live interview session for ${i.job_title}.`,
+              time: 'Just now',
+              unread: !readIds.includes(notifId),
+              icon: 'play_circle',
+              iconColor: 'text-blue-600',
+              iconBg: 'bg-blue-50',
+            };
+          }).filter(Boolean);
+          allNotifications = [...mappedInProgress, ...allNotifications];
+        }
+
+        setNotifications(allNotifications);
+      } catch (err) {
+        console.error("Failed to load notifications", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNotificationsData();
+  }, []);
+
   const handleMarkAsRead = (id) => {
+    const readIds = JSON.parse(localStorage.getItem('read_notification_ids') || '[]');
+    if (!readIds.includes(id)) {
+      readIds.push(id);
+      localStorage.setItem('read_notification_ids', JSON.stringify(readIds));
+    }
     setNotifications(prev =>
       prev.map(n => (n.id === id ? { ...n, unread: false } : n))
     );
   };
 
   const handleMarkAllRead = () => {
+    const readIds = JSON.parse(localStorage.getItem('read_notification_ids') || '[]');
+    notifications.forEach(n => {
+      if (!readIds.includes(n.id)) {
+        readIds.push(n.id);
+      }
+    });
+    localStorage.setItem('read_notification_ids', JSON.stringify(readIds));
     setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
   };
 
   const handleDelete = (id) => {
+    const deletedIds = JSON.parse(localStorage.getItem('deleted_notification_ids') || '[]');
+    if (!deletedIds.includes(id)) {
+      deletedIds.push(id);
+      localStorage.setItem('deleted_notification_ids', JSON.stringify(deletedIds));
+    }
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
   const handleClearAll = () => {
+    const deletedIds = JSON.parse(localStorage.getItem('deleted_notification_ids') || '[]');
+    notifications.forEach(n => {
+      if (!deletedIds.includes(n.id)) {
+        deletedIds.push(n.id);
+      }
+    });
+    localStorage.setItem('deleted_notification_ids', JSON.stringify(deletedIds));
     setNotifications([]);
   };
 
@@ -86,6 +141,15 @@ export default function Notifications() {
   });
 
   const unreadCount = notifications.filter(n => n.unread).length;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px] text-gray-500">
+        <span className="material-symbols-outlined animate-spin text-3xl">sync</span>
+        <span className="ml-2 font-bold">Loading notifications...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
@@ -183,7 +247,7 @@ export default function Notifications() {
                     {notification.detail}
                   </p>
                   
-                  {/* Action row (only visible on hover or mobile) */}
+                  {/* Action row */}
                   <div className="flex items-center gap-4 mt-2.5">
                     {notification.unread && (
                       <button 

@@ -1,42 +1,40 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
-// Mock data for initial states
-const INITIAL_MESSAGES = [
-  {
-    id: 1,
-    role: "ai",
-    text: "Welcome to the interview! Can you please explain your experience with React and state management?",
-    timestamp: "10:00 AM",
-  },
-];
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
-const MOCK_SCORES = [
-  { name: "Technical Knowledge", score: 84, trend: "up" },
-  { name: "Communication", score: 92, trend: "steady" },
-  { name: "Confidence", score: 88, trend: "up" },
-  { name: "Problem Solving", score: 75, trend: "down" },
-  { name: "Behavioral Analysis", score: 89, trend: "up" },
-];
+// Empty initial states
+const INITIAL_MESSAGES = [];
 
-const MOCK_INSIGHTS = [
-  "Candidate demonstrates strong React understanding.",
-  "Communication clarity is above average.",
-  "Response confidence detected.",
+const INITIAL_SCORES = [
+  { name: "Technical Knowledge", score: 0, trend: "steady" },
+  { name: "Communication", score: 0, trend: "steady" },
+  { name: "Confidence", score: 0, trend: "steady" },
+  { name: "Problem Solving", score: 0, trend: "steady" },
+  { name: "Behavioral Analysis", score: 0, trend: "steady" },
 ];
 
 export default function LiveMonitoring() {
   const { sessionId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const stateCandidate = location.state?.candidate;
+
   const bottomRef = useRef(null);
 
   const [messages, setMessages] = useState(INITIAL_MESSAGES);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [status, setStatus] = useState("Candidate Responding");
-  const [scores, setScores] = useState(MOCK_SCORES);
-  const [progress, setProgress] = useState(1);
+  const [status, setStatus] = useState("Connecting...");
+  const [scores, setScores] = useState(INITIAL_SCORES);
+  const [progress, setProgress] = useState(0);
   const [showAnalyticsMobile, setShowAnalyticsMobile] = useState(false);
+  const [candidateInfo, setCandidateInfo] = useState({
+    name: stateCandidate?.name || "Loading...",
+    email: stateCandidate?.email || "",
+    job_title: stateCandidate?.job_title || "Applied Role",
+    match_score: stateCandidate?.ats_score || 0
+  });
 
   // Timer simulation
   useEffect(() => {
@@ -57,55 +55,135 @@ export default function LiveMonitoring() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Mock conversation simulation
+  // Fetch session data & Set up WebSocket
   useEffect(() => {
-    let timeoutId;
-    let timeoutId2;
-    let timeoutId3;
+    let ws;
 
-    // Simulate Candidate typing/responding
-    timeoutId = setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: 2,
-          role: "candidate",
-          text: "Yes! I've been using React for about 3 years. For state management, I typically use Redux Toolkit for complex global state, and Zustand for lighter applications.",
-          timestamp: "10:01 AM",
-        },
-      ]);
-      setStatus("Processing Response");
+    const fetchSessionData = async () => {
+      try {
+        const token = localStorage.getItem('access');
+        const res = await fetch(`${API_BASE}/interviews/live-monitoring/${sessionId}/`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setCandidateInfo({
+            name: data.candidate_name,
+            email: data.candidate_email,
+            job_title: data.job_title,
+            match_score: data.match_score || 92
+          });
+          setProgress(data.progress || 1);
+          if (data.messages && data.messages.length > 0) {
+            setMessages(data.messages);
+          }
+          if (data.scores) {
+            setScores([
+              { name: "Technical Knowledge", score: data.scores.technical || 80, trend: "up" },
+              { name: "Communication", score: data.scores.communication || 80, trend: "steady" },
+              { name: "Confidence", score: data.scores.confidence || 80, trend: "up" },
+              { name: "Problem Solving", score: data.scores.problem_solving || 80, trend: "steady" },
+              { name: "Behavioral Analysis", score: data.scores.behavioral || 80, trend: "up" }
+            ]);
+          }
+          if (data.status === 'completed') {
+            setStatus("Session Completed");
+          } else if (data.status === 'in_progress') {
+            setStatus("Interview In Progress");
+          } else {
+            setStatus("Interview Not Started");
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch session detail", err);
+      }
+    };
 
-      // Simulate AI processing and generating question
-      timeoutId2 = setTimeout(() => {
-        setStatus("AI Speaking");
-        setProgress(2);
-        setScores((prev) => prev.map(s => s.name === "Technical Knowledge" ? { ...s, score: 88 } : s));
+    fetchSessionData();
 
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: 3,
-            role: "ai",
-            text: "That's great. Can you elaborate on why you might choose Zustand over Redux for a specific project?",
-            timestamp: "10:02 AM",
-          },
-        ]);
+    // Connect WebSocket
+    try {
+      const token = localStorage.getItem('access');
+      const urlObj = new URL(API_BASE);
+      const wsProtocol = urlObj.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProtocol}//${urlObj.host}/ws/interview/${sessionId}/?token=${token}`;
+      
+      ws = new WebSocket(wsUrl);
 
-        // Back to candidate
-        timeoutId3 = setTimeout(() => {
-          setStatus("Candidate Responding");
-        }, 3000);
+      ws.onopen = () => {
+        console.log("WebSocket connected for live monitoring session:", sessionId);
+      };
 
-      }, 4000);
-    }, 5000);
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+          if (data.type === 'question') {
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `q-${data.question_index}-${Date.now()}`,
+                role: 'ai',
+                text: data.question_text,
+                timestamp: timestamp
+              }
+            ]);
+            setProgress(data.question_index);
+            setStatus("Candidate Responding");
+          } else if (data.type === 'answer') {
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `a-${data.question_index}-${Date.now()}`,
+                role: 'candidate',
+                text: data.answer_text,
+                timestamp: timestamp
+              }
+            ]);
+            setStatus("Processing Response");
+
+            if (data.evaluation) {
+              setScores([
+                { name: "Technical Knowledge", score: Math.round(data.evaluation.accuracy_score || 80), trend: "up" },
+                { name: "Communication", score: Math.round(data.evaluation.clarity_score || 80), trend: "steady" },
+                { name: "Confidence", score: Math.round(data.evaluation.relevance_score || 80), trend: "up" },
+                { name: "Problem Solving", score: Math.round(data.evaluation.accuracy_score || 80), trend: "up" },
+                { name: "Behavioral Analysis", score: Math.round(data.evaluation.relevance_score || 80), trend: "up" }
+              ]);
+            }
+          } else if (data.type === 'end_session') {
+            setStatus("Session Completed");
+          }
+        } catch (e) {
+          console.error("Error parsing websocket message", e);
+        }
+      };
+
+      ws.onclose = () => {
+        console.log("WebSocket disconnected");
+      };
+
+      ws.onerror = (err) => {
+        console.error("WebSocket error", err);
+      };
+
+    } catch (e) {
+      console.error("Failed to establish websocket connection", e);
+    }
 
     return () => {
-      clearTimeout(timeoutId);
-      clearTimeout(timeoutId2);
-      clearTimeout(timeoutId3);
+      if (ws) {
+        ws.close();
+      }
     };
-  }, []);
+  }, [sessionId]);
+
+  const candidateInitials = candidateInfo.name
+    ? candidateInfo.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+    : 'CD';
 
   return (
     <div className="h-[100dvh] bg-gray-50 flex flex-col font-sans overflow-hidden pb-[env(safe-area-inset-bottom)]">
@@ -121,10 +199,10 @@ export default function LiveMonitoring() {
           <div className="h-5 w-px bg-gray-300 mx-1 sm:mx-2"></div>
           <div>
             <h1 className="text-sm sm:text-base font-bold text-gray-900 leading-tight">
-              Sarah Jenkins
+              {candidateInfo.name}
             </h1>
             <p className="text-[10px] sm:text-xs text-gray-500 font-medium">
-              Frontend Developer • Session ID: {sessionId || "N/A"}
+              {candidateInfo.job_title} • Session ID: {sessionId || "N/A"}
             </p>
           </div>
         </div>
@@ -194,7 +272,7 @@ export default function LiveMonitoring() {
                         Candidate
                       </span>
                       <div className="w-5 h-5 rounded bg-gray-200 flex items-center justify-center font-bold text-gray-600 text-[10px]">
-                        SJ
+                        {candidateInitials}
                       </div>
                     </>
                   )}
@@ -219,7 +297,7 @@ export default function LiveMonitoring() {
               <div className="flex flex-col items-end animate-in fade-in duration-500">
                 <div className="flex items-center gap-2 mb-1.5 px-1">
                   <span className="text-xs font-bold text-gray-500">Candidate</span>
-                  <div className="w-5 h-5 rounded bg-gray-200 flex items-center justify-center font-bold text-gray-600 text-[10px]">SJ</div>
+                  <div className="w-5 h-5 rounded bg-gray-200 flex items-center justify-center font-bold text-gray-600 text-[10px]">{candidateInitials}</div>
                 </div>
                 <div className="max-w-[80%] bg-white border border-gray-200 rounded-2xl rounded-tr-sm px-5 py-4 shadow-sm flex gap-1.5 items-center">
                   <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -280,15 +358,15 @@ export default function LiveMonitoring() {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 shrink-0">
             <div className="flex items-start gap-4 mb-4">
               <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white text-xl font-bold shadow-md">
-                SJ
+                {candidateInitials}
               </div>
               <div className="flex-1">
-                <h3 className="text-base font-bold text-gray-900 leading-tight">Sarah Jenkins</h3>
-                <p className="text-xs text-gray-500 mt-0.5">sarah.jenkins@example.com</p>
+                <h3 className="text-base font-bold text-gray-900 leading-tight">{candidateInfo.name}</h3>
+                <p className="text-xs text-gray-500 mt-0.5">{candidateInfo.email}</p>
                 <div className="mt-2 flex gap-2">
                   <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold uppercase">Round 1</span>
                   <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded text-[10px] font-bold flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[12px]">done_all</span> 92% Match
+                    <span className="material-symbols-outlined text-[12px]">done_all</span> {candidateInfo.match_score}% Match
                   </span>
                 </div>
               </div>
@@ -365,12 +443,19 @@ export default function LiveMonitoring() {
                Real-Time Insights
              </h3>
              <div className="space-y-3 relative z-10">
-                {MOCK_INSIGHTS.map((insight, idx) => (
-                  <div key={idx} className="flex gap-3 bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl p-3">
-                    <span className="material-symbols-outlined text-indigo-300 text-[18px] shrink-0 mt-0.5">check_circle</span>
-                    <p className="text-xs text-indigo-50 leading-relaxed font-medium">{insight}</p>
+                {messages.length > 0 ? (
+                  messages.slice(-3).map((msg, idx) => (
+                    <div key={idx} className="flex gap-3 bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl p-3">
+                      <span className="material-symbols-outlined text-indigo-300 text-[18px] shrink-0 mt-0.5">check_circle</span>
+                      <p className="text-xs text-indigo-50 leading-relaxed font-medium">Recorded response for question {idx + 1}.</p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex gap-3 bg-white/5 backdrop-blur-sm border border-white/5 rounded-xl p-3">
+                     <span className="material-symbols-outlined text-indigo-400/50 text-[18px] shrink-0 mt-0.5">info</span>
+                     <p className="text-xs text-indigo-50 leading-relaxed font-medium">Insights will appear here once the interview starts and candidates begin responding.</p>
                   </div>
-                ))}
+                )}
                 {status === "Processing Response" && (
                    <div className="flex gap-3 bg-white/5 backdrop-blur-sm border border-white/5 rounded-xl p-3 animate-pulse">
                      <span className="material-symbols-outlined text-indigo-400/50 text-[18px] shrink-0 mt-0.5">sync</span>

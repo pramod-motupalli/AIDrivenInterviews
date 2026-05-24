@@ -10,8 +10,6 @@ import WaitingRoom from './pages/WaitingRoom';
 import Interview from './pages/Interview';
 import Submission from './pages/Submission';
 import Feedback from './pages/Feedback';
-import Login from './pages/Login';
-import Results from './pages/Results';
 import NotFound from './pages/NotFound';
 import SessionHandler from './components/SessionHandler';
 
@@ -31,10 +29,6 @@ function App() {
             <Route path="/submission" element={<Submission />} />
             <Route path="/feedback" element={<Feedback />} />
 
-            {/* Results Access */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/results" element={<Results />} />
-
             {/* Entry point is system-check */}
             <Route path="/" element={<Navigate to="/system-check" replace />} />
             <Route path="*" element={<NotFound />} />
@@ -46,4 +40,3 @@ function App() {
 }
 
 export default App;
-

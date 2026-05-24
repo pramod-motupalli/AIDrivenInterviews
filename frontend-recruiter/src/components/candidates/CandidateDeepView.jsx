@@ -34,6 +34,15 @@ export default function CandidateDeepView({
     resume_url = "",
   } = candidate;
 
+  // Helper to determine the best preview URL based on file type
+  const getPreviewUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('blob:')) return `${url}#toolbar=0`;
+    
+    // Force Google Docs viewer for all Supabase URLs to prevent auto-downloads in the iframe.
+    return `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
+  };
+
   const validateEmail = (email) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
@@ -297,9 +306,8 @@ export default function CandidateDeepView({
 
                 {/* Actions (30% width) */}
                 <div className="flex flex-col gap-2.5 w-full md:w-[30%] shrink-0">
-                  {/* New Monitor Live Session Button */}
                   <Button
-                    onClick={() => navigate(`/live-monitoring/mock-session-${candidate.id || 123}`)}
+                    onClick={() => navigate(`/live-monitoring/${candidate.session_token || candidate.id}`, { state: { candidate } })}
                     className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-10 rounded-xl shadow-lg shadow-indigo-100 flex items-center justify-center gap-2 px-3 text-xs sm:text-sm"
                   >
                     <span className="material-symbols-outlined text-[18px]">
@@ -307,6 +315,21 @@ export default function CandidateDeepView({
                     </span>
                     Monitor Live Session
                   </Button>
+                  {candidate.session_token && (
+                    <Button
+                      onClick={() => {
+                        const link = `http://localhost:5174/interview/${candidate.session_token}`;
+                        navigator.clipboard.writeText(link);
+                        alert("Interview link copied to clipboard:\n" + link);
+                      }}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-10 rounded-xl shadow-lg shadow-emerald-100 flex items-center justify-center gap-2 px-3 text-xs sm:text-sm"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">
+                        content_copy
+                      </span>
+                      Copy Session Link
+                    </Button>
+                  )}
                    <Button
                     onClick={onSchedule}
                     disabled={scheduled || isScheduling}
@@ -379,10 +402,10 @@ export default function CandidateDeepView({
                   </div>
                 </div>
                 <div className="flex-1 overflow-auto bg-gray-200/20 p-6 flex justify-center">
-                  {candidate.local_resume_url || resume_url ? (
+                  {resume_url || candidate.local_resume_url ? (
                     <iframe
-                      src={`${candidate.local_resume_url || resume_url}#toolbar=0`}
-                      className="w-full h-full rounded-lg border border-gray-100 shadow-xl max-w-3xl"
+                      src={getPreviewUrl(resume_url || candidate.local_resume_url)}
+                      className="w-full h-full rounded-lg border border-gray-100 shadow-xl max-w-3xl bg-white"
                       title="Resume Preview"
                     />
                   ) : (
