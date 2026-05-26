@@ -32,6 +32,14 @@ export default function Jobs() {
   const [candidateToDelete, setCandidateToDelete] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
+  // Pipeline Tabs and Pagination states
+  const [pipelineSubTab, setPipelineSubTab] = useState('all'); // 'all', 'awaiting_invite', 'scheduled_live', 'completed', 'rejected'
+  const [visibleCount, setVisibleCount] = useState(6);
+
+  useEffect(() => {
+    setVisibleCount(6);
+  }, [pipelineSubTab, activeTab]);
+
   // Screened list from LocalStorage or seed data
   const [screenedList, setScreenedList] = useState(() => {
     const saved = localStorage.getItem('screened_candidates');
@@ -102,6 +110,33 @@ export default function Jobs() {
     };
     fetchCandidates();
   }, []);
+
+  // Calculate counts for each pipeline stage
+  const countAll = screenedList.filter(c => c.status !== 'rejected').length;
+  const countAwaiting = screenedList.filter(c => c.status !== 'Interview Pending' && c.status !== 'Interview In Progress' && c.status !== 'Interview Completed' && c.status !== 'rejected').length;
+  const countScheduledLive = screenedList.filter(c => c.status === 'Interview Pending' || c.status === 'Interview In Progress').length;
+  const countCompleted = screenedList.filter(c => c.status === 'Interview Completed').length;
+  const countRejected = screenedList.filter(c => c.status === 'rejected').length;
+
+  // Filter candidates according to selected sub-tab
+  const filteredCandidates = screenedList.filter(cand => {
+    if (pipelineSubTab === 'awaiting_invite') {
+      return cand.status !== 'Interview Pending' && cand.status !== 'Interview In Progress' && cand.status !== 'Interview Completed' && cand.status !== 'rejected';
+    }
+    if (pipelineSubTab === 'scheduled_live') {
+      return cand.status === 'Interview Pending' || cand.status === 'Interview In Progress';
+    }
+    if (pipelineSubTab === 'completed') {
+      return cand.status === 'Interview Completed';
+    }
+    if (pipelineSubTab === 'rejected') {
+      return cand.status === 'rejected';
+    }
+    return cand.status !== 'rejected';
+  });
+
+  const displayedCandidates = filteredCandidates.slice(0, visibleCount);
+  const hasMore = filteredCandidates.length > visibleCount;
 
 
   const handleUpload = async () => {
@@ -481,15 +516,80 @@ export default function Jobs() {
         </div>
       ) : (
         /* Screened Candidates Pipeline List */
-        <section className="space-y-3 sm:space-y-4 pt-1 sm:pt-2 animate-in fade-in duration-300">
-          <div>
-            <h3 className="text-base sm:text-lg font-bold text-gray-900">Screened Candidates Pipeline</h3>
-            <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1">Candidates processed through AI resume screening and ATS scoring</p>
+        <section className="space-y-4 pt-1 sm:pt-2 animate-in fade-in duration-300">
+
+          {/* Workflow Stage Sub-Tabs */}
+          <div className="flex bg-slate-100/80 p-1 rounded-xl border border-slate-200/60 overflow-x-auto scrollbar-none gap-1">
+            <button
+              onClick={() => setPipelineSubTab('all')}
+              className={`px-3 py-1.5 text-xs sm:text-sm font-bold rounded-lg cursor-pointer transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                pipelineSubTab === 'all'
+                  ? 'bg-white text-blue-600 shadow-sm border border-slate-100'
+                  : 'text-gray-500 hover:text-gray-950'
+              }`}
+            >
+              All Screened
+              <span className={`px-1.5 py-0.5 text-[10px] rounded-full font-black ${pipelineSubTab === 'all' ? 'bg-blue-50 text-blue-600' : 'bg-gray-200/60 text-gray-500'}`}>
+                {countAll}
+              </span>
+            </button>
+            <button
+              onClick={() => setPipelineSubTab('awaiting_invite')}
+              className={`px-3 py-1.5 text-xs sm:text-sm font-bold rounded-lg cursor-pointer transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                pipelineSubTab === 'awaiting_invite'
+                  ? 'bg-white text-blue-600 shadow-sm border border-slate-100'
+                  : 'text-gray-500 hover:text-gray-950'
+              }`}
+            >
+              Awaiting Invite
+              <span className={`px-1.5 py-0.5 text-[10px] rounded-full font-black ${pipelineSubTab === 'awaiting_invite' ? 'bg-blue-50 text-blue-600' : 'bg-gray-200/60 text-gray-500'}`}>
+                {countAwaiting}
+              </span>
+            </button>
+            <button
+              onClick={() => setPipelineSubTab('scheduled_live')}
+              className={`px-3 py-1.5 text-xs sm:text-sm font-bold rounded-lg cursor-pointer transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                pipelineSubTab === 'scheduled_live'
+                  ? 'bg-white text-blue-600 shadow-sm border border-slate-100'
+                  : 'text-gray-500 hover:text-gray-950'
+              }`}
+            >
+              Scheduled / Live
+              <span className={`px-1.5 py-0.5 text-[10px] rounded-full font-black ${pipelineSubTab === 'scheduled_live' ? 'bg-blue-50 text-blue-600' : 'bg-gray-200/60 text-gray-500'}`}>
+                {countScheduledLive}
+              </span>
+            </button>
+            <button
+              onClick={() => setPipelineSubTab('completed')}
+              className={`px-3 py-1.5 text-xs sm:text-sm font-bold rounded-lg cursor-pointer transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                pipelineSubTab === 'completed'
+                  ? 'bg-white text-blue-600 shadow-sm border border-slate-100'
+                  : 'text-gray-500 hover:text-gray-950'
+              }`}
+            >
+              Completed
+              <span className={`px-1.5 py-0.5 text-[10px] rounded-full font-black ${pipelineSubTab === 'completed' ? 'bg-blue-50 text-blue-600' : 'bg-gray-200/60 text-gray-500'}`}>
+                {countCompleted}
+              </span>
+            </button>
+            <button
+              onClick={() => setPipelineSubTab('rejected')}
+              className={`px-3 py-1.5 text-xs sm:text-sm font-bold rounded-lg cursor-pointer transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                pipelineSubTab === 'rejected'
+                  ? 'bg-white text-red-650 shadow-sm border border-slate-100'
+                  : 'text-gray-500 hover:text-red-650'
+              }`}
+            >
+              Rejected
+              <span className={`px-1.5 py-0.5 text-[10px] rounded-full font-black ${pipelineSubTab === 'rejected' ? 'bg-red-50 text-red-650' : 'bg-gray-200/60 text-gray-500'}`}>
+                {countRejected}
+              </span>
+            </button>
           </div>
 
-          {screenedList.length > 0 ? (
+          {filteredCandidates.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-6">
-              {screenedList.map((cand) => (
+              {displayedCandidates.map((cand) => (
                 <div 
                   key={cand.id} 
                   className={`bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group duration-300 ${
@@ -587,11 +687,30 @@ export default function Jobs() {
                   </div>
                 </div>
               ))}
+
+              {hasMore && (
+                <div 
+                  onClick={() => setVisibleCount(prev => prev + 6)}
+                  className="bg-slate-50/50 border border-dashed border-slate-300 hover:border-blue-400 hover:bg-slate-50 hover:shadow-md transition-all cursor-pointer rounded-2xl p-6 flex flex-col items-center justify-center text-center group h-full min-h-[200px] duration-300"
+                >
+                  <div className="w-11 h-11 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                    <span className="material-symbols-outlined text-xl">more_horiz</span>
+                  </div>
+                  <h4 className="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors">
+                    Show {filteredCandidates.length - visibleCount} More Candidates
+                  </h4>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Viewing {visibleCount} of {filteredCandidates.length} in this stage
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
-            <div className="bg-white border border-gray-100 rounded-xl p-12 text-center text-gray-400">
-              <span className="material-symbols-outlined text-4xl mb-2">group_off</span>
-              <p className="text-sm">No screened candidates in the pipeline yet. Screen a candidate to get started.</p>
+            <div className="bg-white border border-gray-150 rounded-2xl p-16 text-center text-gray-400">
+              <span className="material-symbols-outlined text-5xl mb-3 text-gray-300">
+                {pipelineSubTab === 'rejected' ? 'person_remove' : 'group_off'}
+              </span>
+              <p className="text-sm font-semibold">No candidates in this stage of the pipeline</p>
             </div>
           )}
         </section>
@@ -610,11 +729,13 @@ export default function Jobs() {
         isScheduling={schedulingCandidateId === selectedCandidate?.id}
         onReject={() => {
            setShowDeepView(false);
-           const updatedList = screenedList.filter(c => c.id !== selectedCandidate.id);
+           const updatedList = screenedList.map(c => 
+             c.id === selectedCandidate.id ? { ...c, status: 'rejected' } : c
+           );
            setScreenedList(updatedList);
            localStorage.setItem('screened_candidates', JSON.stringify(updatedList));
            setSelectedCandidate(null);
-           setMessage({ type: 'info', text: 'Candidate rejected and removed from pipeline.' });
+           setMessage({ type: 'info', text: 'Candidate status updated to Rejected.' });
         }}
       />
 
