@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
 export default function Profile() {
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -34,15 +36,19 @@ export default function Profile() {
     candidateAlerts: false,
   });
 
-  // Security State
-  const [twoFactor, setTwoFactor] = useState(false);
-
   // Change Password Modal States
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  const handleLogout = () => {
+    localStorage.removeItem('access');
+    localStorage.removeItem('refresh');
+    localStorage.removeItem('role');
+    navigate('/');
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -175,6 +181,7 @@ export default function Profile() {
         setPasswordError(data.error || "Failed to change password");
       }
     } catch (err) {
+      console.error("Password change failed:", err);
       setPasswordError("A network error occurred. Please try again.");
     } finally {
       setIsChangingPassword(false);
@@ -183,7 +190,7 @@ export default function Profile() {
 
   if (isLoading) {
     return (
-      <div className="max-w-5xl mx-auto space-y-8 pb-12 animate-pulse">
+      <div className="max-w-3xl mx-auto space-y-6 pb-12 animate-pulse">
         {/* Page Title */}
         <div>
           <div className="h-8 bg-gray-200 rounded-lg w-48"></div>
@@ -203,48 +210,49 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* MAIN GRID LAYOUT */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* LEFT COLUMN */}
-          <div className="lg:col-span-2 space-y-8">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100 h-14 bg-gray-50 flex items-center">
-                <div className="h-4 bg-gray-200 rounded-lg w-36"></div>
-              </div>
-              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="space-y-2">
-                    <div className="h-3 bg-gray-200 rounded-lg w-20"></div>
-                    <div className="h-10 bg-gray-100/80 rounded-lg w-full"></div>
-                  </div>
-                ))}
-              </div>
-            </div>
+        {/* 2. PERSONAL INFORMATION */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100 h-14 bg-gray-50 flex items-center">
+            <div className="h-4 bg-gray-200 rounded-lg w-36"></div>
           </div>
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="space-y-2">
+                <div className="h-3 bg-gray-200 rounded-lg w-20"></div>
+                <div className="h-10 bg-gray-100/80 rounded-lg w-full"></div>
+              </div>
+            ))}
+          </div>
+        </div>
 
-          {/* RIGHT COLUMN */}
-          <div className="space-y-8">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100 h-14 bg-gray-50 flex items-center">
-                <div className="h-4 bg-gray-200 rounded-lg w-24"></div>
-              </div>
-              <div className="p-6 space-y-6">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="space-y-2">
-                    <div className="h-4 bg-gray-200 rounded-lg w-1/3"></div>
-                    <div className="h-4 bg-gray-100/80 rounded-lg w-2/3"></div>
-                  </div>
-                ))}
-              </div>
+        {/* 3. RECRUITER PREFERENCES */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100 h-14 bg-gray-50 flex items-center">
+            <div className="h-4 bg-gray-200 rounded-lg w-40"></div>
+          </div>
+          <div className="p-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[...Array(2)].map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <div className="h-3 bg-gray-200 rounded-lg w-28"></div>
+                  <div className="h-10 bg-gray-100/80 rounded-lg w-full"></div>
+                </div>
+              ))}
             </div>
           </div>
+        </div>
+
+        {/* BOTTOM: Change Password & Logout skeletons */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex-1 h-[74px] bg-white rounded-2xl border border-gray-200"></div>
+          <div className="w-full sm:w-32 h-[74px] bg-white rounded-2xl border border-gray-200"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-12 relative animate-in fade-in duration-300">
+    <div className="max-w-3xl mx-auto space-y-6 pb-12 relative animate-in fade-in duration-300">
       {/* Success Notification */}
       {showSuccess && (
         <div className="fixed top-20 right-6 z-50 animate-in slide-in-from-top-4 duration-300">
@@ -301,11 +309,8 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* MAIN GRID LAYOUT */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* LEFT COLUMN: Personal Info & Preferences */}
-        <div className="lg:col-span-2 space-y-8">
+      {/* MAIN LAYOUT */}
+      <div className="space-y-6">
           
           {/* 2. PERSONAL INFORMATION */}
           <section className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
@@ -499,66 +504,37 @@ export default function Profile() {
 
             </div>
           </section>
-        </div>
 
-        {/* RIGHT COLUMN: Security & Activity */}
-        <div className="space-y-8">
-          
-          {/* 4. SECURITY */}
-          <section className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="px-4 md:px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-              <span className="material-symbols-outlined text-gray-400">lock</span>
-              <h3 className="text-sm font-bold text-gray-900">Security</h3>
-            </div>
-            <div className="p-4 md:p-6 space-y-5">
-              
-              <button 
-                onClick={() => setShowChangePasswordModal(true)}
-                className="w-full flex items-center justify-between py-2 group cursor-pointer"
-              >
-                <div className="text-left">
-                  <p className="text-sm font-semibold text-gray-900">Change Password</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Last changed 3 months ago</p>
+          {/* BOTTOM: Change Password & Logout */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
+            <button 
+              type="button"
+              onClick={() => setShowChangePasswordModal(true)}
+              className="flex-1 flex items-center justify-between p-4 bg-white rounded-2xl shadow-sm border border-gray-200 hover:border-indigo-500/50 hover:shadow-sm transition-all duration-200 text-left group cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
+                  <span className="material-symbols-outlined text-[20px]">lock</span>
                 </div>
-                <span className="material-symbols-outlined text-gray-400 group-hover:text-indigo-600 transition-colors">chevron_right</span>
-              </button>
-
-              <div className="h-px bg-gray-100"></div>
-
-              <div className="flex items-center justify-between py-2">
                 <div>
-                  <p className="text-sm font-semibold text-gray-900">Two-Factor Auth</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Adds an extra layer of security</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" checked={twoFactor} onChange={(e) => setTwoFactor(e.target.checked)} className="sr-only peer" />
-                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
-                </label>
-              </div>
-
-              <div className="h-px bg-gray-100"></div>
-
-              <div className="py-2">
-                <p className="text-sm font-semibold text-gray-900">Active Sessions</p>
-                <div className="mt-3 flex items-start gap-3">
-                  <span className="material-symbols-outlined text-gray-400 mt-0.5">computer</span>
-                  <div>
-                    <p className="text-xs font-semibold text-gray-900">Windows 11 • Chrome</p>
-                    <p className="text-xs text-gray-500">San Francisco, CA • Active now</p>
-                  </div>
+                  <p className="text-sm font-semibold text-gray-900">Change Password</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Update your password to keep your account secure</p>
                 </div>
               </div>
+              <span className="material-symbols-outlined text-gray-400 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all">chevron_right</span>
+            </button>
 
-              <button className="w-full py-2.5 mt-2 bg-red-50 text-red-600 hover:bg-red-100 text-sm font-semibold rounded-xl transition-colors border border-red-100">
-                Log out of all devices
-              </button>
-            </div>
-          </section>
-
-
+            <button 
+              type="button"
+              onClick={handleLogout}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 transition-all duration-200 text-sm font-semibold shadow-sm sm:h-[74px] shrink-0 cursor-pointer animate-in fade-in"
+            >
+              <span className="material-symbols-outlined text-[18px]">logout</span>
+              <span>Log Out</span>
+            </button>
+          </div>
 
         </div>
-      </div>
       {/* Change Password Modal */}
       {showChangePasswordModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
