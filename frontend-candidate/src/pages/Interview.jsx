@@ -315,24 +315,102 @@ const ActiveInterview = () => {
   const handleFinish = () => finishInterview?.();
 
   if (terminationMessage) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-red-50 p-6 text-center">
-        <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-6">
-          <span className="material-symbols-outlined text-4xl">gavel</span>
-        </div>
-        <h1 className="text-3xl font-bold text-red-700 mb-4">Interview Terminated</h1>
-        <p className="text-lg text-red-600 max-w-md">{terminationMessage}</p>
-      </div>
-    );
-  }
+    return () => {
+      window.removeEventListener('mousemove', handleDragMove);
+      window.removeEventListener('mouseup', handleDragEnd);
+      window.removeEventListener('touchmove', handleDragMove);
+      window.removeEventListener('touchend', handleDragEnd);
+    };
+  }, []);
+
+  const toggleMic = () => {
+    if (isListening) stopListening();
+    else {
+      window.speechSynthesis?.cancel();
+      startListening();
+    }
+  };
+
+  const handleSilenceSubmit = (text) => {
+    const cleanText = (text || transcript || '').trim();
+    if (!cleanText || loading) return;
+    submitAnswer(currentIndex, cleanText);
+    setTranscript('');
+    stopListening();
+  };
+
+  handleSilenceSubmitRef.current = handleSilenceSubmit;
+
+  useEffect(() => {
+    if (!currentQuestion?.text) return;
+    window.speechSynthesis?.cancel();
+    const utterance = new SpeechSynthesisUtterance(currentQuestion.text);
+    utterance.rate = 0.92;
+    utterance.pitch = 1.0;
+    utterance.onend = () => startListening();
+    utteranceRef.current = utterance;
+    window.speechSynthesis?.speak(utterance);
+  }, [currentQuestion?.text]);
+
+  const handleFinish = () => finishInterview?.();
 
   if (!currentQuestion) {
     return <div className="min-h-screen flex items-center justify-center bg-[#F8F9FB]">Loading Interview...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FB] overflow-hidden">
-      {/* Responsive Header */}
+    <div className="min-h-screen bg-[#F8F9FB] overflow-hidden relative">
+      {/* Enhanced Gradient Background when Listening */}
+      {isListening && (
+        <div className="absolute bottom-0 left-0 right-0 h-[520px] pointer-events-none">
+          <div
+            className="absolute bottom-0 left-0 right-0 h-full"
+            style={{
+              background: `linear-gradient(to top, 
+                #f9a8d4 0%, 
+                #e0b3ff 18%, 
+                #c4b5fd 35%, 
+                #a5f3fc 55%, 
+                #67e8f9 75%, 
+                #bae6fd 100%)`,
+              opacity: 0.25 + amplitude * 0.08,
+              filter: 'blur(85px)',
+              borderRadius: '50% 50% 0 0',
+            }}
+          />
+
+          <div
+            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[700px] h-[420px]"
+            style={{
+              background: `radial-gradient(circle at center, 
+                rgba(236, 72, 153, 0.18) 0%, 
+                rgba(139, 92, 246, 0.12) 50%, 
+                transparent 80%)`,
+              filter: 'blur(60px)',
+            }}
+          />
+
+          <div
+            className="absolute bottom-[98px] left-0 right-0 h-[4px]"
+            style={{
+              background: `linear-gradient(90deg, 
+                transparent 5%, 
+                #ec4899 15%, 
+                #d946ef 32%, 
+                #8b5cf6 50%, 
+                #6366f1 68%, 
+                #22d3ee 82%, 
+                #67e8f9 95%, 
+                transparent 100%)`,
+              opacity: 0.82 + amplitude * 0.22,
+              filter: 'blur(16px)',
+              animation: `voiceWave ${1.5 - amplitude * 0.4}s ease-in-out infinite alternate`,
+            }}
+          />
+        </div>
+      )}
+
+      {/* Header */}
       <header className="bg-white border-b border-slate-200 px-4 py-4 sticky top-0 z-50">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -354,27 +432,25 @@ const ActiveInterview = () => {
         </div>
       </header>
 
-      {/* Warnings & Malpractice Alerts */}
-      {warningMessage && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[100] bg-amber-50 border border-amber-200 text-amber-800 px-6 py-4 rounded-2xl shadow-2xl flex items-start gap-4 max-w-md animate-in slide-in-from-top-4">
-          <span className="material-symbols-outlined text-amber-600 text-2xl">warning</span>
-          <div>
-            <h4 className="font-bold mb-1">{warningMessage.title}</h4>
-            <p className="text-sm">{warningMessage.message}</p>
-            <button onClick={() => setWarningMessage(null)} className="mt-3 text-xs font-bold text-amber-700 underline">Dismiss</button>
-          </div>
-        </div>
-      )}
+            {/* Warnings & Malpractice Alerts */}
+            {warningMessage && (
+                <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[100] bg-amber-50 border border-amber-200 text-amber-800 px-6 py-4 rounded-2xl shadow-2xl flex items-start gap-4 max-w-md animate-in slide-in-from-top-4">
+                    <span className="material-symbols-outlined text-amber-600 text-2xl">warning</span>
+                    <div>
+                        <h4 className="font-bold mb-1">{warningMessage.title}</h4>
+                        <p className="text-sm">{warningMessage.message}</p>
+                        <button onClick={() => setWarningMessage(null)} className="mt-3 text-xs font-bold text-amber-700 underline">Dismiss</button>
+                    </div>
+                </div>
+            )}
 
-      {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 pb-32">
-        <div className={`relative rounded-3xl p-5 sm:p-8 transition-all duration-700 ${isListening ? 'bg-white shadow-2xl shadow-blue-500/50 border border-blue-300' : 'bg-white shadow border border-slate-100'
-          }`}
-          style={{
-            boxShadow: isListening ? '0 0 80px -15px rgba(59, 130, 246, 0.6)' : undefined,
-          }}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 pb-32 relative z-10">
+        <div className={`relative rounded-3xl p-5 sm:p-8 transition-all duration-700 
+          ${isListening
+            ? 'bg-white shadow-2xl shadow-blue-500/50 border border-blue-300'
+            : 'bg-white shadow border-0'}`}   // ΓåÉ Removed white border when mic off
         >
-          {/* History + Current Question + Response (same as before) */}
+          {/* Previous Questions */}
           {currentIndex > 0 && (
             <div className="mb-10 sm:mb-12 space-y-10">
               {questions.slice(0, currentIndex).map((q, idx) => {
@@ -392,7 +468,6 @@ const ActiveInterview = () => {
                         <Bot size={24} className="text-blue-600" />
                       </div>
                     </div>
-
                     {answer && (
                       <div className="flex gap-3">
                         <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden flex-shrink-0 border-2 border-white shadow">
@@ -418,7 +493,7 @@ const ActiveInterview = () => {
                 <div className="flex flex-wrap items-center gap-3 mb-5">
                   <div className="px-5 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-full">NOW ASKING</div>
                   <div className="px-5 py-1.5 bg-slate-100 text-slate-600 text-xs font-bold rounded-full">
-                    {currentQuestion.category || 'TECHNICAL'}
+                    {currentQuestion.category || 'BEHAVIORAL'}
                   </div>
                 </div>
                 <p className="text-[21px] sm:text-[22px] leading-relaxed text-slate-800">
@@ -431,7 +506,7 @@ const ActiveInterview = () => {
             </div>
           </div>
 
-          {/* Candidate Response */}
+          {/* Answer Area */}
           <div className="flex gap-3">
             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden flex-shrink-0 border-2 border-white shadow">
               <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt={candidateName} className="w-full h-full object-cover" />
@@ -456,24 +531,51 @@ const ActiveInterview = () => {
         </div>
       </div>
 
-      {/* Mic Button - Mobile Friendly */}
+      {/* Mic Button */}
       <div className="fixed bottom-20 sm:bottom-24 left-1/2 -translate-x-1/2 z-50">
         <button
           onClick={toggleMic}
           disabled={loading}
-          className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 border-4
-            ${isListening ? 'bg-red-50 border-red-400 scale-110 shadow-red-400/40' : 'bg-white border-slate-200 hover:border-blue-400'}`}
+          className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 border-4 
+            ${isListening ? 'bg-blue-50 border-blue-500 scale-110 shadow-blue-500/40' : 'bg-white border-slate-200 hover:border-blue-400'}`}
         >
-          {isListening ? (
-            <Mic size={38} className="text-red-500 animate-pulse" />
-          ) : (
+          {isListening ?
+            <Mic size={38} className="text-blue-500 animate-pulse" /> :
             <Mic size={38} className="text-slate-700" />
-          )}
+          }
         </button>
       </div>
 
-      {/* Bottom Buttons - Better for Mobile */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 py-4 px-4 sm:px-6 flex justify-center items-center z-50">
+      {/* Bottom Bar - White line removed when mic is ON */}
+      <div className="fixed bottom-0 left-0 right-0 backdrop-blur-md py-4 px-4 sm:px-6 flex justify-center items-center z-50"
+        style={{
+          background: `radial-gradient(ellipse 80% 160% at 50% 100%, 
+            rgba(249,168,212,0.25) 0%, 
+            rgba(224,179,255,0.2) 20%, 
+            rgba(196,181,253,0.15) 40%, 
+            rgba(165,243,252,0.1) 60%, 
+            rgba(103,232,249,0.05) 80%, 
+            transparent 100%)`,
+        }}>
+
+        {/* Wavy white line - Only show when mic is OFF */}
+        {!isListening && (
+          <div className="absolute top-[-4px] left-[5%] right-[5%] h-[8px] overflow-visible pointer-events-none">
+            <svg width="100%" height="8" viewBox="0 0 1000 8" preserveAspectRatio="none" style={{ overflow: 'visible' }}>
+              <path
+                d="M0,4 Q50,0 100,4 Q150,8 200,4 Q250,0 300,4 Q350,8 400,4 Q450,0 500,4 Q550,8 600,4 Q650,0 700,4 Q750,8 800,4 Q850,0 900,4 Q950,8 1000,4"
+                fill="none"
+                stroke="rgba(255,255,255,0.7)"
+                strokeWidth="1"
+                style={{
+                  filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.5))',
+                  animation: 'waveShake 2s ease-in-out infinite',
+                }}
+              />
+            </svg>
+          </div>
+        )}
+
         <button
           onClick={handleFinish}
           disabled={loading}
@@ -483,7 +585,7 @@ const ActiveInterview = () => {
         </button>
       </div>
 
-      {/* Draggable Video - Responsive Position */}
+      {/* Draggable Video Feed */}
       <div
         className="fixed bg-black rounded-2xl overflow-hidden shadow-2xl z-50"
         style={{
@@ -491,20 +593,36 @@ const ActiveInterview = () => {
           left: `${position.x || window.innerWidth - (isMobile ? 260 : 320)}px`,
           width: isMobile ? '240px' : '300px',
           aspectRatio: '16 / 9',
-          cursor: isPinned ? 'default' : 'move',
+          cursor: isPinned ? 'default' : 'move'
         }}
         onMouseDown={handleDragStart}
         onTouchStart={handleDragStart}
       >
-        <video ref={videoRef} autoPlay muted={true} playsInline className="w-full h-full object-cover" />
+        <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
         <div className="absolute top-2 right-2 flex gap-1 text-white z-10">
-          <button onClick={() => setIsPinned(!isPinned)} className="p-1.5 hover:bg-white/20 rounded-lg"><Pin size={16} className={isPinned ? "fill-current" : ""} /></button>
+          <button onClick={() => setIsPinned(!isPinned)} className="p-1.5 hover:bg-white/20 rounded-lg">
+            <Pin size={16} className={isPinned ? "fill-current" : ""} />
+          </button>
           <button className="p-1.5 hover:bg-white/20 rounded-lg"><MoreVertical size={16} /></button>
         </div>
         <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2.5 py-0.5 rounded-full">You</div>
       </div>
 
       <VoiceInit />
+
+      <style jsx>{`
+        @keyframes voiceWave {
+          0% { transform: translateY(0px) scaleX(0.9); }
+          100% { transform: translateY(-24px) scaleX(1.1); }
+        }
+        @keyframes waveShake {
+          0% { transform: translateY(0px) scaleY(1); }
+          25% { transform: translateY(-1px) scaleY(1.3); }
+          50% { transform: translateY(1px) scaleY(0.7); }
+          75% { transform: translateY(-0.5px) scaleY(1.2); }
+          100% { transform: translateY(0px) scaleY(1); }
+        }
+      `}</style>
     </div>
   );
 };

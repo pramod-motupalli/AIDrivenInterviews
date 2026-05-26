@@ -9,6 +9,7 @@ from datetime import timedelta
 from jobs.models import Job
 from .models import Interview
 from notifications.utils import send_html_email
+from notifications.models import Notification
 import uuid
 import secrets
 import string
@@ -102,6 +103,23 @@ class InviteCandidateView(APIView):
             'tracking_link': tracking_link,
         }
         send_html_email("Interview Invitation", "emails/invite_email.html", context, [user.email])
+
+        # Create In-App Notifications
+        try:
+            Notification.objects.create(
+                user=request.user,
+                title="Candidate Account Created",
+                detail=f"Candidate account created for {user.email}.",
+                notification_type="candidate_invited"
+            )
+            Notification.objects.create(
+                user=request.user,
+                title="Invitation Email Sent",
+                detail=f"Interview invitation email successfully sent to {user.email} for the {job.title} role.",
+                notification_type="email_sent"
+            )
+        except Exception as e:
+            print(f"[NOTIFICATION ERROR] Failed to create candidate invitation notification: {e}")
 
         return Response({
             "message": "Candidate invited successfully",
@@ -215,6 +233,19 @@ class StartInterviewView(APIView):
         
         try:
             interview = Interview.objects.get(session_token=token)
+            
+            # Create In-App Notification: Interview Started (on transition from pending)
+            if interview.status == 'pending':
+                try:
+                    Notification.objects.create(
+                        user=interview.job.recruiter,
+                        title="Interview Started",
+                        detail=f"{interview.candidate_name or interview.candidate.email} has started the live interview session for {interview.job.title}.",
+                        notification_type="interview_started"
+                    )
+                except Exception as e:
+                    print(f"[NOTIFICATION ERROR] Failed to create interview started notification: {e}")
+
             ai_service = GroqAIService()
 
             # 1. Extract candidate name from resume if not already set
@@ -440,6 +471,25 @@ class SubmitAnswerView(APIView):
 
                 # Generate Final Report
                 generate_interview_report(interview)
+
+                # Create In-App Notification: Interview Completed
+                try:
+                    from reports.models import Report
+                    score = 0
+                    try:
+                        report = Report.objects.get(interview=interview)
+                        score = int(report.overall_score or 0)
+                    except Report.DoesNotExist:
+                        pass
+                    
+                    Notification.objects.create(
+                        user=interview.job.recruiter,
+                        title="AI Interview Completed",
+                        detail=f"{interview.candidate_name or interview.candidate.email} completed the {interview.job.title} interview. Score: {score}%",
+                        notification_type="interview_completed"
+                    )
+                except Exception as e:
+                    print(f"[NOTIFICATION ERROR] Failed to create interview completed notification: {e}")
 
                 return Response({
                     "is_complete": True,
@@ -919,6 +969,17 @@ class AnomalyLogView(APIView):
                     'is_termination': terminate
                 }
             )
+
+            # Create In-App Notification: Proctoring Anomaly
+            try:
+                Notification.objects.create(
+                    user=interview.job.recruiter,
+                    title=f"Proctoring Alert: {event_type}",
+                    detail=f"Proctoring violation detected during {interview.candidate_name or interview.candidate.email}'s session: {event_type}. Severity: {severity}.",
+                    notification_type="anomaly_detected"
+                )
+            except Exception as e:
+                print(f"[NOTIFICATION ERROR] Failed to create proctoring anomaly notification: {e}")
 
             return Response({"status": "Anomaly logged successfully"}, status=status.HTTP_201_CREATED)
         except Interview.DoesNotExist:

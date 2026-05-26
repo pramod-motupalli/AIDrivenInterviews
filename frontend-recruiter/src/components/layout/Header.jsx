@@ -10,17 +10,14 @@ export default function Header() {
     const checkUnread = async () => {
       try {
         const token = localStorage.getItem('access');
-        const res = await fetch(`${API_BASE}/interviews/reports/`, {
+        const res = await fetch(`${API_BASE}/notifications/`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
         if (res.ok) {
-          const reports = await res.json();
-          const readIds = JSON.parse(localStorage.getItem('read_notification_ids') || '[]');
-          const deletedIds = JSON.parse(localStorage.getItem('deleted_notification_ids') || '[]');
-          
-          const activeUnread = reports.some(r => !deletedIds.includes(r.id) && !readIds.includes(r.id));
+          const notifications = await res.json();
+          const activeUnread = notifications.some(n => n.unread);
           setHasUnread(activeUnread);
         }
       } catch (err) {

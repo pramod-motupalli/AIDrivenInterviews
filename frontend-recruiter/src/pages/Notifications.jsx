@@ -11,78 +11,53 @@ export default function Notifications() {
     const fetchNotificationsData = async () => {
       try {
         const token = localStorage.getItem('access');
-        const [reportsRes, interviewsRes] = await Promise.all([
-          fetch(`${API_BASE}/interviews/reports/`, { headers: { 'Authorization': `Bearer ${token}` } }),
-          fetch(`${API_BASE}/interviews/interviews/`, { headers: { 'Authorization': `Bearer ${token}` } })
-        ]);
+        const res = await fetch(`${API_BASE}/notifications/`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
         
-        // Load read and deleted ids from localStorage to persist user actions
-        const readIds = JSON.parse(localStorage.getItem('read_notification_ids') || '[]');
-        const deletedIds = JSON.parse(localStorage.getItem('deleted_notification_ids') || '[]');
-        
-        let allNotifications = [];
+        if (res.ok) {
+          const data = await res.json();
+          const mappedNotifications = data.map(n => {
+            let icon = 'notifications';
+            let iconColor = 'text-blue-600';
+            let iconBg = 'bg-blue-50';
 
-        if (reportsRes.ok) {
-          const reports = await reportsRes.json();
-          // Map reports to in-app notifications dynamically
-          const mappedReports = reports
-            .filter(r => !deletedIds.includes(r.id))
-            .map(r => {
-              const isHighMatch = r.score >= 85;
-              const isLowMatch = r.score < 50;
-              
-              let title = 'AI Interview Completed';
-              let icon = 'check_circle';
-              let iconColor = 'text-emerald-600';
-              let iconBg = 'bg-emerald-50';
-              
-              if (isHighMatch) {
-                title = 'AI Screening High Match';
-                icon = 'star';
-                iconColor = 'text-amber-600';
-                iconBg = 'bg-amber-50';
-              } else if (isLowMatch) {
-                title = 'AI Screening Low Match';
-                icon = 'warning';
-                iconColor = 'text-red-600';
-                iconBg = 'bg-red-50';
-              }
+            if (n.notification_type === 'candidate_invited') {
+              icon = 'person_add';
+              iconColor = 'text-indigo-600';
+              iconBg = 'bg-indigo-50';
+            } else if (n.notification_type === 'email_sent') {
+              icon = 'mail';
+              iconColor = 'text-sky-600';
+              iconBg = 'bg-sky-50';
+            } else if (n.notification_type === 'interview_started') {
+              icon = 'play_circle';
+              iconColor = 'text-green-600';
+              iconBg = 'bg-green-50';
+            } else if (n.notification_type === 'interview_completed') {
+              icon = 'check_circle';
+              iconColor = 'text-emerald-600';
+              iconBg = 'bg-emerald-50';
+            } else if (n.notification_type === 'anomaly_detected') {
+              icon = 'warning';
+              iconColor = 'text-red-600';
+              iconBg = 'bg-red-50';
+            }
 
-              return {
-                id: r.id,
-                title: title,
-                detail: `${r.name} completed the ${r.role} interview. Score: ${r.score}%`,
-                time: r.created_at || 'Recently',
-                unread: !readIds.includes(r.id),
-                icon: icon,
-                iconColor: iconColor,
-                iconBg: iconBg,
-              };
-            });
-            allNotifications = [...allNotifications, ...mappedReports];
-        }
-
-        if (interviewsRes.ok) {
-          const interviews = await interviewsRes.json();
-          const inProgress = interviews.filter(i => i.status === 'in_progress');
-          const mappedInProgress = inProgress.map(i => {
-            const notifId = `started-${i.id}`;
-            if (deletedIds.includes(notifId)) return null;
             return {
-              id: notifId,
-              title: 'Interview Started',
-              detail: `${i.candidate_name || i.candidate_email} has started the live interview session for ${i.job_title}.`,
-              time: 'Just now',
-              unread: !readIds.includes(notifId),
-              icon: 'play_circle',
-              iconColor: 'text-blue-600',
-              iconBg: 'bg-blue-50',
+              id: n.id,
+              title: n.title,
+              detail: n.detail,
+              time: n.formatted_time,
+              unread: n.unread,
+              icon: icon,
+              iconColor: iconColor,
+              iconBg: iconBg
             };
-          }).filter(Boolean);
-          allNotifications = [...mappedInProgress, ...allNotifications];
-        }
+          });
 
-        setNotifications(allNotifications);
+          setNotifications(mappedNotifications);
+        }
       } catch (err) {
         console.error("Failed to load notifications", err);
       } finally {
@@ -93,46 +68,66 @@ export default function Notifications() {
     fetchNotificationsData();
   }, []);
 
-  const handleMarkAsRead = (id) => {
-    const readIds = JSON.parse(localStorage.getItem('read_notification_ids') || '[]');
-    if (!readIds.includes(id)) {
-      readIds.push(id);
-      localStorage.setItem('read_notification_ids', JSON.stringify(readIds));
-    }
-    setNotifications(prev =>
-      prev.map(n => (n.id === id ? { ...n, unread: false } : n))
-    );
-  };
-
-  const handleMarkAllRead = () => {
-    const readIds = JSON.parse(localStorage.getItem('read_notification_ids') || '[]');
-    notifications.forEach(n => {
-      if (!readIds.includes(n.id)) {
-        readIds.push(n.id);
+  const handleMarkAsRead = async (id) => {
+    try {
+      const token = localStorage.getItem('access');
+      const res = await fetch(`${API_BASE}/notifications/${id}/read/`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setNotifications(prev =>
+          prev.map(n => (n.id === id ? { ...n, unread: false } : n))
+        );
       }
-    });
-    localStorage.setItem('read_notification_ids', JSON.stringify(readIds));
-    setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
-  };
-
-  const handleDelete = (id) => {
-    const deletedIds = JSON.parse(localStorage.getItem('deleted_notification_ids') || '[]');
-    if (!deletedIds.includes(id)) {
-      deletedIds.push(id);
-      localStorage.setItem('deleted_notification_ids', JSON.stringify(deletedIds));
+    } catch (err) {
+      console.error("Failed to mark notification as read", err);
     }
-    setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  const handleClearAll = () => {
-    const deletedIds = JSON.parse(localStorage.getItem('deleted_notification_ids') || '[]');
-    notifications.forEach(n => {
-      if (!deletedIds.includes(n.id)) {
-        deletedIds.push(n.id);
+  const handleMarkAllRead = async () => {
+    try {
+      const token = localStorage.getItem('access');
+      const res = await fetch(`${API_BASE}/notifications/mark-all-read/`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
       }
-    });
-    localStorage.setItem('deleted_notification_ids', JSON.stringify(deletedIds));
-    setNotifications([]);
+    } catch (err) {
+      console.error("Failed to mark all as read", err);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      const token = localStorage.getItem('access');
+      const res = await fetch(`${API_BASE}/notifications/${id}/`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setNotifications(prev => prev.filter(n => n.id !== id));
+      }
+    } catch (err) {
+      console.error("Failed to delete notification", err);
+    }
+  };
+
+  const handleClearAll = async () => {
+    try {
+      const token = localStorage.getItem('access');
+      const res = await fetch(`${API_BASE}/notifications/clear-all/`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setNotifications([]);
+      }
+    } catch (err) {
+      console.error("Failed to clear notifications", err);
+    }
   };
 
   const filteredNotifications = notifications.filter(n => {
