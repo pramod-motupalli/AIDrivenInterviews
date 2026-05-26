@@ -18,6 +18,8 @@
     "@capacitor/keyboard": "^8.0.3",
     "@capacitor/status-bar": "^8.0.2",
     "@tailwindcss/vite": "^4.2.4",
+    "@tensorflow-models/coco-ssd": "^2.2.3",
+    "@tensorflow/tfjs": "^4.22.0",
     "axios": "^1.16.0",
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.14.0",

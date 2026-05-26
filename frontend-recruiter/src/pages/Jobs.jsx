@@ -34,7 +34,8 @@ export default function Jobs() {
 
   // Screened list from LocalStorage or seed data
   const [screenedList, setScreenedList] = useState(() => {
-    const saved = localStorage.getItem('screened_candidates');
+    const userEmail = localStorage.getItem('email') || 'default';
+    const saved = localStorage.getItem(`screened_candidates_${userEmail}`);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -73,7 +74,8 @@ export default function Jobs() {
             session_token: item.session_token
           }));
           
-          let localCandidates = JSON.parse(localStorage.getItem('screened_candidates') || '[]');
+          const userEmail = localStorage.getItem('email') || 'default';
+          let localCandidates = JSON.parse(localStorage.getItem(`screened_candidates_${userEmail}`) || '[]');
           localCandidates = localCandidates.filter(c => !String(c.id).startsWith('mock-'));
           
           // Create a map of API candidates by email for easy lookup
@@ -94,7 +96,7 @@ export default function Jobs() {
           const finalList = [...Array.from(apiCandidateMap.values()), ...mergedList];
           
           setScreenedList(finalList);
-          localStorage.setItem('screened_candidates', JSON.stringify(finalList));
+          localStorage.setItem(`screened_candidates_${userEmail}`, JSON.stringify(finalList));
         }
       } catch (err) {
         console.error("Error fetching candidates:", err);
@@ -161,7 +163,8 @@ export default function Jobs() {
 
       const updatedList = [newCand, ...screenedList];
       setScreenedList(updatedList);
-      localStorage.setItem('screened_candidates', JSON.stringify(updatedList));
+      const userEmail = localStorage.getItem('email') || 'default';
+      localStorage.setItem(`screened_candidates_${userEmail}`, JSON.stringify(updatedList));
 
       setMessage(null);
 
@@ -179,7 +182,8 @@ export default function Jobs() {
       
       const updatedList = screenedList.map(c => c.id === selectedCandidate.id ? updated : c);
       setScreenedList(updatedList);
-      localStorage.setItem('screened_candidates', JSON.stringify(updatedList));
+      const userEmail = localStorage.getItem('email') || 'default';
+      localStorage.setItem(`screened_candidates_${userEmail}`, JSON.stringify(updatedList));
     }
     if (analysisResult && (!selectedCandidate || selectedCandidate.id === analysisResult.id)) {
       setAnalysisResult(prev => ({ ...prev, ...updatedData }));
@@ -231,7 +235,8 @@ export default function Jobs() {
           c.id === candidate.id ? { ...c, status: 'Interview Pending', session_token: data.session_token } : c
         );
         setScreenedList(updatedList);
-        localStorage.setItem('screened_candidates', JSON.stringify(updatedList));
+        const userEmail = localStorage.getItem('email') || 'default';
+        localStorage.setItem(`screened_candidates_${userEmail}`, JSON.stringify(updatedList));
 
         if (analysisResult && analysisResult.id === candidate.id) {
           setAnalysisResult(prev => ({ ...prev, status: 'Interview Pending', session_token: data.session_token }));
@@ -269,7 +274,8 @@ export default function Jobs() {
       if (res.ok) {
         const updatedList = screenedList.filter(c => c.id !== cand.id);
         setScreenedList(updatedList);
-        localStorage.setItem('screened_candidates', JSON.stringify(updatedList));
+        const userEmail = localStorage.getItem('email') || 'default';
+        localStorage.setItem(`screened_candidates_${userEmail}`, JSON.stringify(updatedList));
         alert("Candidate and associated data deleted successfully.");
       } else {
         alert("Failed to delete candidate from server.");
@@ -612,7 +618,8 @@ export default function Jobs() {
            setShowDeepView(false);
            const updatedList = screenedList.filter(c => c.id !== selectedCandidate.id);
            setScreenedList(updatedList);
-           localStorage.setItem('screened_candidates', JSON.stringify(updatedList));
+           const userEmail = localStorage.getItem('email') || 'default';
+           localStorage.setItem(`screened_candidates_${userEmail}`, JSON.stringify(updatedList));
            setSelectedCandidate(null);
            setMessage({ type: 'info', text: 'Candidate rejected and removed from pipeline.' });
         }}

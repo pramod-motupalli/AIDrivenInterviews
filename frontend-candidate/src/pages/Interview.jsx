@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import VoiceInit from '../components/VoiceInit';
 import useVoiceStream from '../hooks/useVoiceStream';
+import * as cocoSsd from '@tensorflow-models/coco-ssd';
+import '@tensorflow/tfjs';
 
 const ActiveInterview = () => {
   const navigate = useNavigate();
@@ -29,6 +31,11 @@ const ActiveInterview = () => {
   const [timeLeft, setTimeLeft] = useState(1800);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
+  const [tabSwitchCount, setTabSwitchCount] = useState(0);
+  const [warningMessage, setWarningMessage] = useState(null);
+  const [terminationMessage, setTerminationMessage] = useState(null);
+  const [model, setModel] = useState(null);
+
   const videoRef = useRef(null);
   const dragRef = useRef({ isDragging: false, startX: 0, startY: 0, initX: 0, initY: 0 });
 
@@ -45,6 +52,15 @@ const ActiveInterview = () => {
   useEffect(() => {
     if (voiceTranscript !== undefined) setTranscript(voiceTranscript);
   }, [voiceTranscript]);
+
+  useEffect(() => {
+    if (warningMessage) {
+      const timer = setTimeout(() => {
+        setWarningMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [warningMessage]);
 
   // Camera & Timer
   useEffect(() => {
@@ -75,6 +91,140 @@ const ActiveInterview = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  const reportAnomaly = async (eventType, severity, terminate = false, imageBlob = null) => {
+    try {
+      const token = localStorage.getItem('interview_session_token');
+      if (!token) return;
+
+      const formData = new FormData();
+      formData.append('token', token);
+      formData.append('event_type', eventType);
+      formData.append('severity', severity);
+      formData.append('terminate', terminate);
+      
+      if (imageBlob) {
+        formData.append('image', imageBlob, 'snapshot.png');
+      }
+
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+      await fetch(`${API_BASE}/interviews/anomaly/`, {
+        method: 'POST',
+        body: formData,
+      });
+    } catch (err) {
+      console.error("Failed to report anomaly", err);
+    }
+  };
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && !isComplete && !terminationMessage) {
+        const newCount = tabSwitchCount + 1;
+        setTabSwitchCount(newCount);
+        
+        const willTerminate = newCount >= 3;
+        const captureAndReport = () => {
+          if (videoRef.current && videoRef.current.readyState === 4) {
+            const canvas = document.createElement('canvas');
+            canvas.width = videoRef.current.videoWidth;
+            canvas.height = videoRef.current.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob(blob => {
+              reportAnomaly('Tab Switch Warning', willTerminate ? 'high' : 'medium', willTerminate, blob);
+            }, 'image/png');
+          } else {
+            reportAnomaly('Tab Switch Warning', willTerminate ? 'high' : 'medium', willTerminate);
+          }
+        };
+        captureAndReport();
+        
+        if (willTerminate) {
+          setTerminationMessage("Interview Terminated due to Malpractice: Tab Switching limit exceeded.");
+          // Wait briefly before ending
+          setTimeout(() => {
+            navigate('/submission');
+          }, 3000);
+        } else {
+          setWarningMessage({
+            title: "Warning: Tab Switched",
+            message: `Please do not switch tabs or minimize the window during the interview. Doing this ${3 - newCount} more time(s) will terminate your interview.`
+          });
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [isComplete, terminationMessage, navigate, tabSwitchCount]);
+
+  useEffect(() => {
+    cocoSsd.load().then(loadedModel => {
+      setModel(loadedModel);
+    }).catch(err => console.error("Failed to load COCO-SSD model", err));
+  }, []);
+
+  // Object Detection Loop
+  useEffect(() => {
+    let animationId;
+    let lastDetectionTime = 0;
+    // Debounce alerts so we don't spam the UI
+    let lastAlertTime = 0;
+
+    const detectFrame = async () => {
+      if (!model || !videoRef.current || videoRef.current.readyState !== 4 || isComplete || terminationMessage) {
+        animationId = requestAnimationFrame(detectFrame);
+        return;
+      }
+
+      const now = Date.now();
+      if (now - lastDetectionTime > 1500) { // Check every 1.5 seconds
+        lastDetectionTime = now;
+        try {
+          const predictions = await model.detect(videoRef.current);
+          let phones = 0;
+          let people = 0;
+          
+          predictions.forEach(p => {
+            if (p.class === 'cell phone') phones++;
+            if (p.class === 'person') people++;
+          });
+
+          if (phones > 0 || people > 1) {
+            const timeSinceAlert = now - lastAlertTime;
+            if (timeSinceAlert > 10000) { // Only alert once every 10 seconds max
+              lastAlertTime = now;
+              const canvas = document.createElement('canvas');
+              canvas.width = videoRef.current.videoWidth;
+              canvas.height = videoRef.current.videoHeight;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+              
+              canvas.toBlob(blob => {
+                if (blob) {
+                  const violationType = phones > 0 ? "Tech Object Detected (Cell Phone)" : "Multiple People Detected";
+                  reportAnomaly(violationType, 'high', false, blob);
+                  setWarningMessage({
+                    title: `Warning: ${violationType}`,
+                    message: "Please maintain a clean environment. This incident has been recorded."
+                  });
+                }
+              }, 'image/png');
+            }
+          }
+        } catch (err) {
+          console.error("Detection error:", err);
+        }
+      }
+      animationId = requestAnimationFrame(detectFrame);
+    };
+
+    if (model) {
+      detectFrame();
+    }
+
+    return () => cancelAnimationFrame(animationId);
+  }, [model, isComplete, terminationMessage]);
 
   const progress = questions.length ? Math.round(((currentIndex + 1) / questions.length) * 100) : 0;
 
@@ -164,6 +314,18 @@ const ActiveInterview = () => {
 
   const handleFinish = () => finishInterview?.();
 
+  if (terminationMessage) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-red-50 p-6 text-center">
+        <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-6">
+          <span className="material-symbols-outlined text-4xl">gavel</span>
+        </div>
+        <h1 className="text-3xl font-bold text-red-700 mb-4">Interview Terminated</h1>
+        <p className="text-lg text-red-600 max-w-md">{terminationMessage}</p>
+      </div>
+    );
+  }
+
   if (!currentQuestion) {
     return <div className="min-h-screen flex items-center justify-center bg-[#F8F9FB]">Loading Interview...</div>;
   }
@@ -191,6 +353,18 @@ const ActiveInterview = () => {
           </div>
         </div>
       </header>
+
+      {/* Warnings & Malpractice Alerts */}
+      {warningMessage && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[100] bg-amber-50 border border-amber-200 text-amber-800 px-6 py-4 rounded-2xl shadow-2xl flex items-start gap-4 max-w-md animate-in slide-in-from-top-4">
+          <span className="material-symbols-outlined text-amber-600 text-2xl">warning</span>
+          <div>
+            <h4 className="font-bold mb-1">{warningMessage.title}</h4>
+            <p className="text-sm">{warningMessage.message}</p>
+            <button onClick={() => setWarningMessage(null)} className="mt-3 text-xs font-bold text-amber-700 underline">Dismiss</button>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 pb-32">

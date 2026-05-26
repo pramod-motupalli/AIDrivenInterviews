@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from datetime import timedelta
@@ -47,6 +48,9 @@ class InviteCandidateView(APIView):
                 return Response({"error": "Job not found or unauthorized"}, status=status.HTTP_404_NOT_FOUND)
 
         user, created = User.objects.get_or_create(email=email, defaults={'role': 'candidate'})
+
+        if not created and user.role == 'recruiter':
+            return Response({"error": "This email belongs to an existing recruiter and cannot be invited as a candidate."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Always generate a fresh temp password on every invite
         # so the candidate always receives working credentials in their email
@@ -144,13 +148,17 @@ class CandidateDeleteView(APIView):
             print(f"Error deleting from supabase: {e}")
 
         # 2. Delete from Postgres User table (Cascades to Profiles, Interviews, Reports, etc.)
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        
         try:
             # We enforce role='candidate' so recruiter doesn't accidentally delete another recruiter
-            user = User.objects.get(email=email, role='candidate')
-            user.delete()
-        except User.DoesNotExist:
-            # User might not exist if they were only screened and never invited
-            pass
+            users = User.objects.filter(email=email, role='candidate')
+            for user in users:
+                user.delete()
+        except Exception as e:
+            print(f"Error deleting user from Postgres: {e}")
+            return Response({"error": "Failed to delete candidate data from database."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -247,7 +255,106 @@ class StartInterviewView(APIView):
         except Interview.DoesNotExist:
             return Response({"error": "Invalid session token"}, status=status.HTTP_404_NOT_FOUND)
 
+
+def generate_interview_report(interview):
+    try:
+        from reports.models import Report
+        from ai_engine.services import GroqAIService
+        
+        ai_service = GroqAIService()
+        responses = InterviewResponse.objects.filter(interview=interview)
+        
+        status_note = ""
+        if interview.status == 'malpractice':
+            status_note = "\nCRITICAL NOTE: This interview was TERMINATED EARLY due to suspected malpractice (e.g. cheating, tab switching, multiple people). You must give an overall score of 0, and strongly recommend 'Reject'."
+            
+        if not responses.exists() and interview.status == 'malpractice':
+            responses_text = "No responses provided (Interview terminated early)."
+        else:
+            responses_text = "\n".join([f"Q: {r.question_text}\nA: {r.answer_text}\nScore: {r.relevance_score+r.accuracy_score+r.clarity_score}/300" for r in responses])
+        
+        report_prompt = f"""
+You are a Senior Talent Acquisition Lead. Summarize this technical interview.
+Job Description: {interview.job.description[:500]}
+Responses:
+{responses_text}{status_note}
+
+Provide:
+1. Overall Score (0-100)
+2. Overall Summary (brief 2-3 sentence overview of the performance)
+3. Strengths
+4. Weaknesses
+5. Recommendation (Hire/Reject/Maybe)
+
+Return ONLY a JSON object:
+{{
+    "overall_score": 85,
+    "overall_summary": "A brief overview...",
+    "strengths": "List strengths",
+    "weaknesses": "List weaknesses",
+    "recommendation": "Hire"
+}}
+"""
+        report_data = ai_service._chat_json(report_prompt)
+        report_obj = Report.objects.create(
+            interview=interview,
+            overall_score=report_data.get('overall_score', 0),
+            overall_summary=report_data.get('overall_summary', 'No summary generated.'),
+            strengths=report_data.get('strengths', ''),
+            weaknesses=report_data.get('weaknesses', ''),
+            recommendation=report_data.get('recommendation', 'Reject'),
+            is_visible_to_candidate=True
+        )
+
+        try:
+            from core.supabase_client import supabase_service
+            import uuid as _uuid
+            candidate_email = interview.candidate.email
+            unique_id = str(_uuid.uuid4())
+            report_remote_path = f"reports/{unique_id}_{interview.id}_report.json"
+
+            all_responses = InterviewResponse.objects.filter(interview=interview).order_by('question_index')
+            supabase_report_payload = {
+                "interview_id": str(interview.id),
+                "candidate_name": interview.candidate_name or candidate_email,
+                "candidate_email": candidate_email,
+                "job_title": interview.job.title if interview.job else "",
+                "overall_score": report_data.get('overall_score'),
+                "overall_summary": report_data.get('overall_summary'),
+                "strengths": report_data.get('strengths'),
+                "weaknesses": report_data.get('weaknesses'),
+                "recommendation": report_data.get('recommendation'),
+                "status": interview.status,
+                "responses": [
+                    {
+                        "question_index": r.question_index,
+                        "question": r.question_text,
+                        "answer": r.answer_text,
+                        "relevance_score": r.relevance_score,
+                        "accuracy_score": r.accuracy_score,
+                        "clarity_score": r.clarity_score,
+                    }
+                    for r in all_responses
+                ]
+            }
+
+            report_url = supabase_service.upload_json_report(
+                supabase_report_payload,
+                report_remote_path
+            )
+
+            supabase_service.update_screening_with_report(candidate_email, report_url)
+            report_obj.pdf_s3_url = report_url
+            report_obj.save()
+            print(f"Report uploaded to Supabase: {report_url}")
+        except Exception as supabase_err:
+            print(f"Supabase report upload failed: {supabase_err}")
+
+    except Exception as e:
+        print(f"Error generating report: {e}")
+
 class SubmitAnswerView(APIView):
+
     permission_classes = [IsAuthenticated] # Candidate should be authenticated by now
 
     def post(self, request):
@@ -332,97 +439,7 @@ class SubmitAnswerView(APIView):
                 )
 
                 # Generate Final Report
-                try:
-                    from reports.models import Report
-                    responses = InterviewResponse.objects.filter(interview=interview)
-                    responses_text = "\n".join([f"Q: {r.question_text}\nA: {r.answer_text}\nScore: {r.relevance_score+r.accuracy_score+r.clarity_score}/300" for r in responses])
-                    
-                    report_prompt = f"""
-You are a Senior Talent Acquisition Lead. Summarize this technical interview.
-Job Description: {interview.job.description[:500]}
-Responses:
-{responses_text}
-
-Provide:
-1. Overall Score (0-100)
-2. Overall Summary (brief 2-3 sentence overview of the performance)
-3. Strengths
-4. Weaknesses
-5. Recommendation (Hire/Reject/Maybe)
-
-Return ONLY a JSON object:
-{{
-    "overall_score": 85,
-    "overall_summary": "A brief overview of how the candidate performed across all questions.",
-    "strengths": "List strengths",
-    "weaknesses": "List weaknesses",
-    "recommendation": "Hire"
-}}
-"""
-                    report_data = ai_service._chat_json(report_prompt)
-                    report_obj = Report.objects.create(
-                        interview=interview,
-                        overall_score=report_data.get('overall_score'),
-                        overall_summary=report_data.get('overall_summary'),
-                        strengths=report_data.get('strengths'),
-                        weaknesses=report_data.get('weaknesses'),
-                        recommendation=report_data.get('recommendation'),
-                        is_visible_to_candidate=True
-                    )
-
-                    # Upload full report JSON to Supabase Storage
-                    try:
-                        from core.supabase_client import supabase_service
-                        import uuid as _uuid
-                        candidate_email = interview.candidate.email
-                        unique_id = str(_uuid.uuid4())
-                        report_remote_path = f"reports/{unique_id}_{interview.id}_report.json"
-
-                        # Build a rich report payload to store in Supabase
-                        all_responses = InterviewResponse.objects.filter(interview=interview).order_by('question_index')
-                        supabase_report_payload = {
-                            "interview_id": str(interview.id),
-                            "candidate_name": interview.candidate_name or candidate_email,
-                            "candidate_email": candidate_email,
-                            "job_title": interview.job.title if interview.job else "",
-                            "overall_score": report_data.get('overall_score'),
-                            "overall_summary": report_data.get('overall_summary'),
-                            "strengths": report_data.get('strengths'),
-                            "weaknesses": report_data.get('weaknesses'),
-                            "recommendation": report_data.get('recommendation'),
-                            "responses": [
-                                {
-                                    "question_index": r.question_index,
-                                    "question": r.question_text,
-                                    "answer": r.answer_text,
-                                    "relevance_score": r.relevance_score,
-                                    "accuracy_score": r.accuracy_score,
-                                    "clarity_score": r.clarity_score,
-                                }
-                                for r in all_responses
-                            ]
-                        }
-
-                        report_url = supabase_service.upload_json_report(
-                            supabase_report_payload,
-                            report_remote_path
-                        )
-
-                        # Update the screenings table row for this candidate with the report URL
-                        supabase_service.update_screening_with_report(candidate_email, report_url)
-
-                        # Also store report URL on the Report model for easy retrieval
-                        report_obj.pdf_s3_url = report_url
-                        report_obj.save()
-
-                        print(f"Report uploaded to Supabase: {report_url}")
-                    except Exception as supabase_err:
-                        print(f"Supabase report upload failed (non-critical): {supabase_err}")
-
-                    # Candidate results portal is disabled; no completion email or password reset needed.
-
-                except Exception as e:
-                    print(f"Error generating report: {e}")
+                generate_interview_report(interview)
 
                 return Response({
                     "is_complete": True,
@@ -847,3 +864,65 @@ class LiveMonitoringDetailView(APIView):
             
         except Interview.DoesNotExist:
             return Response({"error": "Interview session not found"}, status=status.HTTP_404_NOT_FOUND)
+
+from .models import AnomalyLog
+
+class AnomalyLogView(APIView):
+    permission_classes = [AllowAny]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def post(self, request):
+        token = request.data.get('token')
+        event_type = request.data.get('event_type')
+        severity = request.data.get('severity', 'medium')
+        image = request.FILES.get('image')
+        terminate = request.data.get('terminate', 'false').lower() == 'true'
+
+        if not token or not event_type:
+            return Response({"error": "token and event_type required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            interview = Interview.objects.get(session_token=token)
+            
+            snapshot_url = ""
+            if image:
+                from django.core.files.storage import default_storage
+                import uuid
+                remote_path = f"anomalies/{interview.id}_{uuid.uuid4()}.png"
+                saved_path = default_storage.save(remote_path, image)
+                snapshot_url = request.build_absolute_uri(default_storage.url(saved_path))
+            
+            anomaly = AnomalyLog.objects.create(
+                interview=interview,
+                event_type=event_type,
+                severity=severity,
+                snapshot_url=snapshot_url
+            )
+
+            if terminate:
+                interview.status = 'malpractice'
+                interview.save()
+                
+                # Generate a report even if terminated due to malpractice
+                generate_interview_report(interview)
+
+            # Broadcast to recruiter
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f'interview_{interview.session_token}',
+                {
+                    'type': 'anomaly_event',
+                    'event_type': event_type,
+                    'severity': severity,
+                    'snapshot_url': snapshot_url,
+                    'timestamp': anomaly.timestamp.isoformat(),
+                    'is_termination': terminate
+                }
+            )
+
+            return Response({"status": "Anomaly logged successfully"}, status=status.HTTP_201_CREATED)
+        except Interview.DoesNotExist:
+            return Response({"error": "Invalid session token"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            print(f"Error logging anomaly: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -1,6 +1,35 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
+    this.setState({ errorInfo });
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 text-red-600 font-mono text-sm bg-red-50 min-h-screen">
+          <h2 className="text-xl font-bold mb-4">React Crashed:</h2>
+          <div className="bg-white p-4 rounded border border-red-200 overflow-auto">
+            {this.state.error && this.state.error.toString()}
+            <br />
+            <pre className="mt-2 text-gray-500">{this.state.errorInfo?.componentStack}</pre>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children; 
+  }
+}
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
@@ -28,6 +57,7 @@ export default function LiveMonitoring() {
   const [status, setStatus] = useState("Connecting...");
   const [scores, setScores] = useState(INITIAL_SCORES);
   const [progress, setProgress] = useState(0);
+  const [anomalies, setAnomalies] = useState([]);
   const [showAnalyticsMobile, setShowAnalyticsMobile] = useState(false);
   const [candidateInfo, setCandidateInfo] = useState({
     name: stateCandidate?.name || "Loading...",
@@ -156,6 +186,11 @@ export default function LiveMonitoring() {
             }
           } else if (data.type === 'end_session') {
             setStatus("Session Completed");
+          } else if (data.type === 'anomaly_event') {
+            setAnomalies(prev => [...prev, data]);
+            if (data.is_termination) {
+              setStatus("Terminated (Malpractice)");
+            }
           }
         } catch (e) {
           console.error("Error parsing websocket message", e);
@@ -186,6 +221,7 @@ export default function LiveMonitoring() {
     : 'CD';
 
   return (
+    <ErrorBoundary>
     <div className="h-[100dvh] bg-gray-50 flex flex-col font-sans overflow-hidden pb-[env(safe-area-inset-bottom)]">
       {/* Sticky Header */}
       <header className="sticky top-0 z-50 bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 pt-[calc(0.75rem+env(safe-area-inset-top))] sm:pt-[calc(1rem+env(safe-area-inset-top))] flex items-center justify-between shadow-sm shrink-0">
@@ -433,6 +469,32 @@ export default function LiveMonitoring() {
              </div>
           </div>
 
+          {/* Anomalies Panel */}
+          {anomalies.length > 0 && (
+            <div className="bg-red-50 rounded-2xl shadow-sm border border-red-200 p-5 shrink-0 relative overflow-hidden mt-6">
+               <h3 className="text-sm font-bold text-red-900 mb-4 flex items-center gap-2">
+                 <span className="material-symbols-outlined text-red-600">warning</span>
+                 Security Alerts ({anomalies.length})
+               </h3>
+               <div className="space-y-3">
+                 {anomalies.map((anomaly, idx) => (
+                   <div key={idx} className="bg-white border border-red-100 rounded-xl p-3 flex flex-col gap-2 shadow-sm">
+                     <div className="flex items-center justify-between">
+                       <span className="text-xs font-bold text-red-700">{anomaly.event_type}</span>
+                       <span className="text-[10px] text-red-500 font-black uppercase bg-red-100 px-2 py-0.5 rounded-full">{anomaly.severity}</span>
+                     </div>
+                     <span className="text-[10px] text-gray-500">{anomaly.timestamp ? new Date(anomaly.timestamp).toLocaleTimeString() : 'Just now'}</span>
+                     {anomaly.snapshot_url && (
+                       <a href={anomaly.snapshot_url} target="_blank" rel="noreferrer" className="mt-1 block">
+                         <img src={anomaly.snapshot_url} alt="Violation Snapshot" className="rounded-md border border-red-100 w-full object-cover max-h-32 hover:opacity-90 transition-opacity" />
+                       </a>
+                     )}
+                   </div>
+                 ))}
+               </div>
+            </div>
+          )}
+
           {/* AI Insights Section */}
           <div className="bg-gradient-to-br from-indigo-900 via-indigo-800 to-blue-900 rounded-2xl shadow-lg border border-indigo-700 p-5 shrink-0 relative overflow-hidden">
              <div className="absolute top-0 right-0 p-4 opacity-10">
@@ -467,5 +529,6 @@ export default function LiveMonitoring() {
         </div>
       </div>
     </div>
+    </ErrorBoundary>
   );
 }

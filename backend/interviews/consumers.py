@@ -133,6 +133,16 @@ class InterviewConsumer(AsyncWebsocketConsumer):
             'message': event['message'],
         }))
 
+    async def anomaly_event(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'anomaly_event',
+            'event_type': event['event_type'],
+            'severity': event['severity'],
+            'snapshot_url': event['snapshot_url'],
+            'timestamp': event['timestamp'],
+            'is_termination': event['is_termination']
+        }))
+
     # ── DB helpers ────────────────────────────────────────────────────
 
     @sync_to_async

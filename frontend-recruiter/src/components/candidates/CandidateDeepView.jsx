@@ -78,30 +78,9 @@ export default function CandidateDeepView({
     }
   };
 
-  // Mock data for experience and education if not present
-  const experience = candidate.experience || [
-    {
-      role: "Frontend Developer",
-      company: "Tech Solutions Inc.",
-      duration: "2 Years",
-      description:
-        "Developed responsive web applications using React and Tailwind CSS. Optimized performance and improved accessibility.",
-    },
-    {
-      role: "Junior Developer",
-      company: "SoftDev Co.",
-      duration: "1 Year",
-      description: "Assisted in building UI components and integrating APIs.",
-    },
-  ];
-
-  const education = candidate.education || [
-    {
-      degree: "Bachelor of Science in Computer Science",
-      school: "State University",
-      year: "2021",
-    },
-  ];
+  // Dynamic data for experience and education from the backend, fallback to empty arrays if not present
+  const experience = candidate.experience || [];
+  const education = candidate.education || [];
 
   const statusOptions = [
     {
@@ -448,10 +427,7 @@ export default function CandidateDeepView({
                     JD Match Explanation
                   </h4>
                   <p className="text-sm text-gray-700 leading-relaxed">
-                    Sarah has strong experience in frontend development with
-                    React and TypeScript. Resume shows consistent career growth
-                    and relevant skills match the job requirements exceptionally
-                    well.
+                    {candidate.jd_match_explanation || "No explanation provided."}
                   </p>
                 </div>
 
@@ -467,18 +443,15 @@ export default function CandidateDeepView({
                       </span>
                     </div>
                     <ul className="space-y-1.5 ml-7">
-                      <li className="text-xs text-gray-700 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                        Strong React and TypeScript expertise
-                      </li>
-                      <li className="text-xs text-gray-700 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                        Good experience in building scalable web apps
-                      </li>
-                      <li className="text-xs text-gray-700 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                        Great match with required skills
-                      </li>
+                      {(candidate.strengths || []).map((strength, idx) => (
+                        <li key={idx} className="text-xs text-gray-700 flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                          {strength}
+                        </li>
+                      ))}
+                      {(!candidate.strengths || candidate.strengths.length === 0) && (
+                        <li className="text-xs text-gray-500 italic">No strengths identified</li>
+                      )}
                     </ul>
                   </div>
 
@@ -493,10 +466,15 @@ export default function CandidateDeepView({
                       </span>
                     </div>
                     <ul className="space-y-1.5 ml-7">
-                      <li className="text-xs text-gray-700 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                        Limited backend development experience
-                      </li>
+                      {(candidate.concerns || []).map((concern, idx) => (
+                        <li key={idx} className="text-xs text-gray-700 flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                          {concern}
+                        </li>
+                      ))}
+                      {(!candidate.concerns || candidate.concerns.length === 0) && (
+                        <li className="text-xs text-gray-500 italic">No concerns identified</li>
+                      )}
                     </ul>
                   </div>
                 </div>
@@ -540,7 +518,7 @@ export default function CandidateDeepView({
                   Experience
                 </h3>
                 <div className="space-y-6">
-                  {experience.map((exp, idx) => (
+                  {experience.length > 0 ? experience.map((exp, idx) => (
                     <div
                       key={idx}
                       className="relative pl-6 pb-2 last:pb-0 group"
@@ -566,7 +544,9 @@ export default function CandidateDeepView({
                         </p>
                       </div>
                     </div>
-                  ))}
+                  )) : (
+                    <p className="text-xs text-gray-400">No experience identified</p>
+                  )}
                 </div>
               </div>
 
@@ -579,7 +559,7 @@ export default function CandidateDeepView({
                   Education
                 </h3>
                 <div className="space-y-4">
-                  {education.map((edu, idx) => (
+                  {education.length > 0 ? education.map((edu, idx) => (
                     <div
                       key={idx}
                       className="bg-gray-50/50 p-3 rounded-xl border border-gray-100"
@@ -596,7 +576,9 @@ export default function CandidateDeepView({
                         </span>
                       </div>
                     </div>
-                  ))}
+                  )) : (
+                    <p className="text-xs text-gray-400">No education identified</p>
+                  )}
                 </div>
               </div>
             </div>

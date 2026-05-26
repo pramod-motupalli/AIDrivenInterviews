@@ -144,7 +144,13 @@ if AWS_S3_ENDPOINT_URL:
 else:
     AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
 
-if AWS_ACCESS_KEY_ID:
+try:
+    import storages
+    HAS_STORAGES = True
+except ImportError:
+    HAS_STORAGES = False
+
+if AWS_ACCESS_KEY_ID and HAS_STORAGES:
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
     AWS_S3_FILE_OVERWRITE = False
     if AWS_S3_ENDPOINT_URL:
@@ -184,7 +190,7 @@ CORS_ALLOW_HEADERS = [
     "x-requested-with",
 ]
 
-REDIS_URL = config('REDIS_URL', default='')
+REDIS_URL = '' # config('REDIS_URL', default='')
 
 if REDIS_URL:
     # Production: use Redis channel layer

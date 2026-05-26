@@ -20,7 +20,7 @@ class SupabaseService:
         if not self.url or not self.key:
             raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in Django settings")
         
-        if SUPABASE_AVAILABLE:
+        if SUPABASE_AVAILABLE and "dummy.supabase.co" not in self.url:
             self.client: Client = create_client(self.url, self.key)
         else:
             self.client = None

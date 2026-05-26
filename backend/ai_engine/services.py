@@ -73,7 +73,25 @@ Return ONLY a valid JSON object with this structure:
         "email": "Candidate Email",
         "skills": ["Skill1", "Skill2"],
         "ats_score": 85,
-        "highlights": ["Highlight 1", "Highlight 2"]
+        "highlights": ["Highlight 1", "Highlight 2"],
+        "experience": [
+            {{
+                "role": "Job Title",
+                "company": "Company Name",
+                "duration": "e.g. 2 Years",
+                "description": "Brief summary of achievements"
+            }}
+        ],
+        "education": [
+            {{
+                "degree": "Degree Name",
+                "school": "University Name",
+                "year": "Graduation Year"
+            }}
+        ],
+        "jd_match_explanation": "A short paragraph explaining how the candidate's background matches the JD.",
+        "strengths": ["Strength 1", "Strength 2"],
+        "concerns": ["Potential Concern 1"]
     }}
 }}
 """
@@ -91,6 +109,11 @@ Return ONLY a valid JSON object with this structure:
                     "skills": [],
                     "ats_score": 0,
                     "highlights": [f"Error: {str(e)}"],
+                    "experience": [],
+                    "education": [],
+                    "jd_match_explanation": "Failed to generate AI screening summary.",
+                    "strengths": [],
+                    "concerns": []
                 },
             }
 
