@@ -191,6 +191,10 @@ class ValidateSessionView(APIView):
             if interview.link1_expiry and interview.link1_expiry < timezone.now():
                 return Response({"error": "Session link has expired"}, status=status.HTTP_403_FORBIDDEN)
             
+            # Block retests for completed or malpractice/terminated sessions
+            if interview.status in ['completed', 'malpractice', 'shortlisted', 'rejected']:
+                return Response({"error": "This interview link has already been used and is no longer valid."}, status=status.HTTP_403_FORBIDDEN)
+            
             # Try to extract name if not already set
             if not interview.candidate_name and interview.resume_text:
                 try:
@@ -380,22 +384,28 @@ Return ONLY a JSON object:
             print(f"Report uploaded to Supabase: {report_url}")
         except Exception as supabase_err:
             print(f"Supabase report upload failed: {supabase_err}")
-
     except Exception as e:
         print(f"Error generating report: {e}")
 
 class SubmitAnswerView(APIView):
-
-    permission_classes = [IsAuthenticated] # Candidate should be authenticated by now
+    permission_classes = [AllowAny]
 
     def post(self, request):
         interview_id = request.data.get('interview_id')
         question_text = request.data.get('question_text')
         answer_text = request.data.get('answer_text')
         question_index = request.data.get('question_index', 0)
+        token = request.data.get('token')
 
         try:
-            interview = Interview.objects.get(id=interview_id, candidate=request.user)
+            if token:
+                interview = Interview.objects.get(session_token=token)
+            else:
+                if request.user and request.user.is_authenticated:
+                    interview = Interview.objects.get(id=interview_id, candidate=request.user)
+                else:
+                    return Response({"error": "Session token or authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
+            
             ai_service = GroqAIService()
 
             # 1. Evaluate the answer
@@ -503,22 +513,31 @@ class SubmitAnswerView(APIView):
 
 
 class GetResultsView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request):
         interview_id = request.query_params.get('interview_id')
+        token = request.query_params.get('token')
         user = request.user
+        
         try:
-            if interview_id:
-                if user.role == 'recruiter':
+            if token:
+                interview = Interview.objects.get(session_token=token)
+            elif interview_id:
+                if user and user.is_authenticated and user.role == 'recruiter':
                     interview = Interview.objects.get(id=interview_id, job__recruiter=user)
-                else:
+                elif user and user.is_authenticated:
                     interview = Interview.objects.get(id=interview_id, candidate=user)
-            else:
-                if user.role == 'recruiter':
-                    interview = Interview.objects.filter(job__recruiter=user, status='completed').latest('created_at')
                 else:
-                    interview = Interview.objects.filter(candidate=user, status='completed').latest('created_at')
+                    return Response({"error": "Authentication or session token required"}, status=status.HTTP_401_UNAUTHORIZED)
+            else:
+                if user and user.is_authenticated:
+                    if user.role == 'recruiter':
+                        interview = Interview.objects.filter(job__recruiter=user, status='completed').latest('created_at')
+                    else:
+                        interview = Interview.objects.filter(candidate=user, status='completed').latest('created_at')
+                else:
+                    return Response({"error": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
         except Interview.DoesNotExist:
             return Response({"error": "Interview not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -594,17 +613,24 @@ class InterviewViewSet(viewsets.ModelViewSet):
 
 
 class SubmitReviewView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def post(self, request):
         from .models import CandidateReview
         interview_id = request.data.get('interview_id')
+        token = request.data.get('token')
 
-        if not interview_id:
-            return Response({"error": "interview_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not interview_id and not token:
+            return Response({"error": "interview_id or token is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            interview = Interview.objects.get(id=interview_id, candidate=request.user)
+            if token:
+                interview = Interview.objects.get(session_token=token)
+            else:
+                if request.user and request.user.is_authenticated:
+                    interview = Interview.objects.get(id=interview_id, candidate=request.user)
+                else:
+                    return Response({"error": "Authentication or token required"}, status=status.HTTP_401_UNAUTHORIZED)
         except Interview.DoesNotExist:
             return Response({"error": "Interview not found"}, status=status.HTTP_404_NOT_FOUND)
 
