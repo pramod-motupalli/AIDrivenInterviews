@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 
-const SILENCE_TIMEOUT_MS = 10000;   // fire onSilenceDetected after 10 s of no new text
+const SILENCE_TIMEOUT_MS = 4000;   // fire onSilenceDetected after 4 s of no new text
 
 export default function useVoiceStream({ onSilenceDetected } = {}) {
   const [isListening, setIsListening]     = useState(false);
@@ -107,7 +107,7 @@ export default function useVoiceStream({ onSilenceDetected } = {}) {
       };
 
       recognition.onerror = (e) => {
-        if (e.error !== 'no-speech') {
+        if (e.error !== 'no-speech' && e.error !== 'aborted') {
           console.error("[STT] Speech recognition error:", e.error);
         }
         if (['not-allowed', 'audio-capture', 'service-not-allowed'].includes(e.error)) {
@@ -136,36 +136,38 @@ export default function useVoiceStream({ onSilenceDetected } = {}) {
       recognitionRef.current = recognition;
 
       // 2. Initialise Audio Analyzer (purely for visual amplitude animation)
-      // Isolated in a separate try-catch so that if it fails due to browser autoplay/permissions/locks,
+      // Isolated in a separate try-catch and IIFE so that if it hangs or fails,
       // it does NOT prevent the actual Speech Recognition engine from running.
-      try {
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (AudioCtx) {
-          const audioContext = new AudioCtx();
-          audioContextRef.current = audioContext;
+      (async () => {
+        try {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) {
+            const audioContext = new AudioCtx();
+            audioContextRef.current = audioContext;
 
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          streamRef.current = stream;
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            streamRef.current = stream;
 
-          const source = audioContext.createMediaStreamSource(stream);
-          const analyser = audioContext.createAnalyser();
-          analyser.fftSize = 32;
-          source.connect(analyser);
-          analyserRef.current = analyser;
+            const source = audioContext.createMediaStreamSource(stream);
+            const analyser = audioContext.createAnalyser();
+            analyser.fftSize = 32;
+            source.connect(analyser);
+            analyserRef.current = analyser;
 
-          const dataArray = new Uint8Array(analyser.frequencyBinCount);
-          const tick = () => {
-            if (!analyserRef.current) return;
-            analyserRef.current.getByteFrequencyData(dataArray);
-            const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-            setAmplitude(Math.min(avg / 5, 20));
-            animFrameRef.current = requestAnimationFrame(tick);
-          };
-          tick();
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            const tick = () => {
+              if (!analyserRef.current) return;
+              analyserRef.current.getByteFrequencyData(dataArray);
+              const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+              setAmplitude(Math.min(avg / 5, 20));
+              animFrameRef.current = requestAnimationFrame(tick);
+            };
+            tick();
+          }
+        } catch (audioErr) {
+          console.warn("[STT] Audio analyzer initialization failed, continuing speech recognition anyway:", audioErr);
         }
-      } catch (audioErr) {
-        console.warn("[STT] Audio analyzer initialization failed, continuing speech recognition anyway:", audioErr);
-      }
+      })();
 
       recognition.start();
       setIsListening(true);

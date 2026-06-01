@@ -35,12 +35,7 @@ INSTALLED_APPS = [
     'corsheaders',
 
     # Local apps
-    'users',
-    'jobs',
-    'interviews',
     'ai_engine',
-    'reports',
-    'notifications',
 ]
 
 MIDDLEWARE = [
@@ -109,7 +104,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-AUTH_USER_MODEL = 'users.User'
+AUTH_USER_MODEL = 'ai_engine.User'
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'

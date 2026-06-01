@@ -21,6 +21,7 @@ const ActiveInterview = () => {
     isComplete = false,
     loading = false,
     submitAnswer,
+    startInterview,
     finishInterview
   } = context || {};
 
@@ -54,6 +55,14 @@ const ActiveInterview = () => {
   }, [voiceTranscript]);
 
   useEffect(() => {
+    // If the page is refreshed, state is lost. 
+    // This auto-resumes the session from the backend if it's not already loading.
+    if (questions.length === 0 && !loading && startInterview) {
+      startInterview();
+    }
+  }, [questions.length, loading, startInterview]);
+
+  useEffect(() => {
     if (warningMessage) {
       const timer = setTimeout(() => {
         setWarningMessage(null);
@@ -66,8 +75,8 @@ const ActiveInterview = () => {
   useEffect(() => {
     const initCamera = async () => {
       try {
-        // Exclude audio here to prevent microphone capture conflict with useVoiceStream/SpeechRecognition
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        // Request audio alongside video to guarantee microphone permissions are granted upfront.
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         if (videoRef.current) videoRef.current.srcObject = stream;
       } catch (err) {
         console.error("Camera failed:", err);
@@ -581,7 +590,7 @@ const ActiveInterview = () => {
 
       <VoiceInit />
 
-      <style jsx>{`
+      <style>{`
         @keyframes voiceWave {
           0% { transform: translateY(0px) scaleX(0.9); }
           100% { transform: translateY(-24px) scaleX(1.1); }

@@ -12,6 +12,7 @@ export const InterviewProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
 
   const startInterview = async () => {
+    if (loading) return;
     setLoading(true);
     try {
       const token = localStorage.getItem('interview_session_token');
@@ -26,14 +27,21 @@ export const InterviewProvider = ({ children }) => {
 
       const data = await interviewService.startInterview(token);
       
-      // data.questions is an array from the backend, usually containing just the first generated question: [{"text": "...", "index": 0}]
-      setQuestions(data.questions || []);
-      setCurrentIndex(0);
+      const loadedQuestions = data.questions || [];
+      setQuestions(loadedQuestions);
+      
+      // If the interview is already completed, mark it
+      if (data.status === 'completed') {
+        setIsComplete(true);
+        setCurrentIndex(loadedQuestions.length > 0 ? loadedQuestions.length - 1 : 0);
+      } else {
+        // Resume at the latest unanswered question
+        setCurrentIndex(loadedQuestions.length > 0 ? loadedQuestions.length - 1 : 0);
+        setIsComplete(false);
+      }
       setAnswers({});
-      setIsComplete(false);
     } catch (error) {
       console.error('Failed to start interview:', error);
-      // Fallback on API failure
       setQuestions(MOCK_INTERVIEW_QUESTIONS);
       setCurrentIndex(0);
       setAnswers({});

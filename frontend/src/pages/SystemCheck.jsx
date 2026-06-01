@@ -13,23 +13,47 @@ const SystemCheck = () => {
     network: { status: 'checking', label: 'Network Quality', detail: 'Testing connection...', sub: '' },
   });
 
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordedAudioUrl, setRecordedAudioUrl] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  
   const streamRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const audioRef = useRef(new Audio());
 
   useEffect(() => {
-    const init = async () => {
+    const audio = audioRef.current;
+    const handleEnded = () => setIsPlaying(false);
+    audio.addEventListener('ended', handleEnded);
+    return () => audio.removeEventListener('ended', handleEnded);
+  }, []);
+
+  useEffect(() => {
+    // Run network and screen checks immediately so they don't wait for camera permissions
+    setTimeout(() => updateCheck('screen', 'passed', 'Screen Sharing Ready', 'System permissions granted'), 1200);
+    setTimeout(() => updateCheck('network', 'passed', 'Excellent (54 Mbps)', 'Latency: 14ms'), 1800);
+
+    const initCamera = async () => {
       try {
-        const ms = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        // Wrap getUserMedia in a Promise.race with a 5-second timeout.
+        // This prevents the page from hanging infinitely if another app is locking the camera on Windows.
+        const getMedia = navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        const timeout = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("Timeout waiting for camera/mic permissions")), 6000)
+        );
+        
+        const ms = await Promise.race([getMedia, timeout]);
+        
         streamRef.current = ms;
         setStream(ms);
         if (videoRef.current) videoRef.current.srcObject = ms;
         updateCheck('audio', 'passed', 'Built-in Microphone detected', 'Audio levels optimal');
       } catch (err) {
-        updateCheck('audio', 'failed', 'Permission denied', 'Please enable mic in settings');
+        updateCheck('audio', 'failed', 'Camera/Mic Unavailable', 'Please check permissions or close other apps (like Zoom/Meet) using your camera.');
       }
-      setTimeout(() => updateCheck('screen', 'passed', 'Screen Sharing Ready', 'System permissions granted'), 1200);
-      setTimeout(() => updateCheck('network', 'passed', 'Excellent (54 Mbps)', 'Latency: 14ms'), 1800);
     };
-    init();
+    initCamera();
     return () => { 
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(t => t.stop());
@@ -43,6 +67,71 @@ const SystemCheck = () => {
 
   const updateCheck = (key, status, detail, sub) => {
     setChecks(prev => ({ ...prev, [key]: { ...prev[key], status, detail, sub } }));
+  };
+
+  const startRecording = () => {
+    if (!streamRef.current) return;
+    setRecordedAudioUrl(null);
+    audioChunksRef.current = [];
+    
+    // Create a new stream with ONLY the audio track to ensure the Audio object can play it natively
+    const audioTrack = streamRef.current.getAudioTracks()[0];
+    if (!audioTrack) {
+        console.error("No audio track found in stream!");
+        return;
+    }
+    const audioStream = new MediaStream([audioTrack]);
+    
+    const mediaRecorder = new MediaRecorder(audioStream);
+    
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data && event.data.size > 0) {
+        audioChunksRef.current.push(event.data);
+      }
+    };
+    
+    mediaRecorder.onstop = () => {
+      // Use the recorder's negotiated mimeType instead of hardcoding 'audio/webm' which might break on Safari/Edge
+      const mimeType = mediaRecorder.mimeType || 'audio/webm';
+      const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+      console.log("Recorded audio blob size:", audioBlob.size, "Mime type:", mimeType);
+      
+      const audioUrl = URL.createObjectURL(audioBlob);
+      setRecordedAudioUrl(audioUrl);
+      
+      audioRef.current.src = audioUrl;
+      audioRef.current.volume = 1.0; // Ensure it's not muted
+    };
+    
+    mediaRecorder.start(200); // 200ms timeslices guarantees chunks are dispatched
+    mediaRecorderRef.current = mediaRecorder;
+    setIsRecording(true);
+
+    // Auto-stop after 5 seconds max
+    setTimeout(() => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        stopRecording();
+      }
+    }, 5000);
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const playRecording = () => {
+    if (recordedAudioUrl && !isPlaying) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().then(() => {
+        setIsPlaying(true);
+      }).catch(err => {
+        console.error("Audio playback failed:", err);
+        setIsPlaying(false);
+      });
+    }
   };
 
   const handleJoin = () => {
@@ -141,9 +230,22 @@ const SystemCheck = () => {
                     <div className="text-xs font-medium text-slate-500 leading-relaxed mb-1">{check.detail}</div>
                     {check.sub && <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{check.sub}</div>}
                     {key === 'audio' && isPassed && (
-                      <button className="mt-3 text-[11px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 transition-colors">
-                        <Volume2 size={14} /> Play test sound
-                      </button>
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        {!isRecording ? (
+                          <button onClick={startRecording} className="text-[11px] px-3 py-1.5 rounded-full bg-blue-50 font-bold text-blue-600 hover:bg-blue-100 flex items-center gap-1.5 transition-colors">
+                            <Mic size={14} /> Record Voice
+                          </button>
+                        ) : (
+                          <button onClick={stopRecording} className="text-[11px] px-3 py-1.5 rounded-full bg-red-50 font-bold text-red-600 hover:bg-red-100 flex items-center gap-1.5 transition-colors">
+                            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span> Stop Recording
+                          </button>
+                        )}
+                        {recordedAudioUrl && (
+                          <button onClick={playRecording} disabled={isPlaying} className={`text-[11px] px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-colors ${isPlaying ? 'bg-green-100 text-green-700' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}>
+                            <Volume2 size={14} className={isPlaying ? 'animate-pulse' : ''} /> {isPlaying ? 'Playing...' : 'Play Recording'}
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
 

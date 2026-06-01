@@ -6,12 +6,12 @@ from .views import HealthCheckView, FileUploadView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/v1/auth/', include('users.urls')),
+    path('api/v1/auth/', include('ai_engine.urls.users_urls')),
     path('api/v1/health/', HealthCheckView.as_view(), name='health_check'),
     path('api/v1/upload/', FileUploadView.as_view(), name='file_upload'),
-    path('api/v1/interviews/', include('interviews.urls')),
-    path('api/v1/ai/', include('ai_engine.urls')),
-    path('api/v1/notifications/', include('notifications.urls')),
+    path('api/v1/interviews/', include('ai_engine.urls.interviews_urls')),
+    path('api/v1/ai/', include('ai_engine.urls.ai_engine_urls')),
+    path('api/v1/notifications/', include('ai_engine.urls.notifications_urls')),
 ]
 
 if settings.DEBUG:

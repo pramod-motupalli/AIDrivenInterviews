@@ -166,7 +166,7 @@ Return ONLY a JSON object with this exact structure:
         resume_text = interview.resume_text if interview.resume_text else "No resume provided."
 
         # Fetch conversation history from database
-        from interviews.models import Response
+        from ai_engine.models import Response
         history_responses = Response.objects.filter(interview=interview).order_by('question_index')
         history_items = []
         for r in history_responses:

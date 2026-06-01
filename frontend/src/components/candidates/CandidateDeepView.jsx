@@ -297,7 +297,7 @@ export default function CandidateDeepView({
                   {candidate.session_token && (
                     <Button
                       onClick={() => {
-                        const link = `http://localhost:5174/interview/${candidate.session_token}`;
+                        const link = `http://localhost:5173/interview/${candidate.session_token}`;
                         navigator.clipboard.writeText(link);
                         alert("Interview link copied to clipboard:\n" + link);
                       }}
