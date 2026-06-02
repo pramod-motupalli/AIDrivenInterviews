@@ -46,6 +46,7 @@ const ActiveInterview = () => {
   const [warningMessage, setWarningMessage] = useState(null);
   const [terminationMessage, setTerminationMessage] = useState(null);
   const [model, setModel] = useState(null);
+  const [mediaStream, setMediaStream] = useState(null);
 
   const videoRef = useRef(null);
   const dragRef = useRef({ isDragging: false, startX: 0, startY: 0, initX: 0, initY: 0 });
@@ -56,6 +57,7 @@ const ActiveInterview = () => {
 
   const { isListening, amplitude, startListening, stopListening, transcript: voiceTranscript } = useVoiceStream({
     onSilenceDetected: useCallback((text) => handleSilenceSubmitRef.current?.(text), []),
+    existingStream: mediaStream
   });
 
   const candidateName = localStorage.getItem('candidate_name') || 'MACHA MADHAVI';
@@ -121,6 +123,7 @@ const ActiveInterview = () => {
         // Request audio alongside video to guarantee microphone permissions are granted upfront.
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         if (videoRef.current) videoRef.current.srcObject = stream;
+        setMediaStream(stream);
       } catch (err) {
         console.error("Camera failed:", err);
       }
@@ -378,7 +381,19 @@ const ActiveInterview = () => {
   }
 
   if (!currentQuestion) {
-    return <div className="min-h-screen flex items-center justify-center bg-[#F8F9FB]">Loading Interview...</div>;
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F8F9FB] text-slate-800 space-y-4">
+        <h2 className="text-2xl font-bold">Loading Interview...</h2>
+        <div className="bg-white p-4 rounded shadow border border-red-200">
+          <p><strong>Debug Info:</strong></p>
+          <p>Questions Length: {questions?.length}</p>
+          <p>Current Index: {currentIndex}</p>
+          <p>Loading State: {loading ? "True" : "False"}</p>
+          <p>Is Complete: {isComplete ? "True" : "False"}</p>
+          <p>Token: {localStorage.getItem('interview_session_token') || "None"}</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -535,7 +550,13 @@ const ActiveInterview = () => {
               <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt={candidateName} className="w-full h-full object-cover" />
             </div>
             <div className="flex-1">
-              <div className="bg-white rounded-3xl p-5 sm:p-8 min-h-[140px] border border-slate-100">
+              <div className="bg-white rounded-3xl p-5 sm:p-8 min-h-[140px] border border-slate-100 relative overflow-hidden">
+                {loading && (
+                  <div className="absolute inset-0 bg-white/90 backdrop-blur-sm z-10 flex flex-col items-center justify-center">
+                    <div className="w-8 h-8 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-3" />
+                    <span className="text-sm font-bold text-slate-700 animate-pulse">AI is evaluating and generating next question...</span>
+                  </div>
+                )}
                 <textarea
                   className="w-full h-full resize-none outline-none text-[16px] sm:text-[17px] leading-relaxed placeholder-slate-400"
                   placeholder="Listen carefully and respond to the interviewer..."
@@ -543,7 +564,7 @@ const ActiveInterview = () => {
                   readOnly={true}
                 />
               </div>
-              {isListening && (
+              {isListening && !loading && (
                 <div className="mt-3 flex items-center gap-2 text-blue-600 text-sm font-medium">
                   <div className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
                   Listening & Transcribing...

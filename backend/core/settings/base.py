@@ -165,8 +165,6 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@aiinterview.com')
 
 # Frontend Configuration
-CANDIDATE_FRONTEND_URL = config('CANDIDATE_FRONTEND_URL', default='http://localhost:5174')
-RECRUITER_FRONTEND_URL = config('RECRUITER_FRONTEND_URL', default='http://localhost:5173')
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
 SESSION_LINK_EXPIRY_HOURS = config('SESSION_LINK_EXPIRY_HOURS', default=24, cast=int)
 

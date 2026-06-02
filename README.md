@@ -123,23 +123,16 @@ The platform's backend schema is built around modular relational architectures o
 │   ├── manage.py                   # Django CLI executable
 │   └── requirements.txt            # Python dependencies (Daphne, Groq, Pytest)
 │
-├── frontend-recruiter/             # React Recruiter Workspace Portal
+├── frontend/                       # Responsive React Unified Portal (Recruiter + Candidate)
 │   ├── src/
-│   │   ├── components/             # Reusable UI widgets & Layout wrappers
-│   │   ├── pages/                  # Jobs, Reports, Real-time Live Monitoring dashboards
-│   │   ├── lib/                    # API connection, Axios setups
-│   │   └── App.jsx                 # Routing table & route protection
-│   └── package.json                # Front-end dependencies
-│
-├── frontend-candidate/             # Responsive React Candidate App
-│   ├── src/
-│   │   ├── context/                # Interview session hooks, authentication contexts
-│   │   ├── pages/                  # Waiting Room, System Checks, Interactive Timeline
-│   │   └── App.jsx                 # Core routing system
+│   │   ├── components/             # Common UI, layouts, auth route guards
+│   │   ├── pages/                  # Unified views (Dashboard, Jobs, Live Monitoring, System Checks, Interviews)
+│   │   ├── context/                # Shared and Candidate auth/interview state contexts
+│   │   └── App.jsx                 # Unified routing tree mapping Recruiter & Candidate flows
 │   ├── android/                    # CapacitorJS Android Studio configuration folder
 │   ├── ios/                        # CapacitorJS Xcode configuration folder
 │   ├── capacitor.config.json       # Native compilation preferences
-│   └── package.json                # Front-end dependencies
+│   └── package.json                # Front-end dependencies & scripts
 │
 ├── docker-compose.yml              # Orchestrator setting up local Redis container
 └── README_SETUP.md                 # Granular teammate setup documentation
@@ -206,24 +199,16 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-### 3. Launch the Frontends
-Launch both client applications in separate terminals:
+### 3. Launch the Frontend
+The candidate portal and recruiter dashboard are consolidated into a single unified frontend application. Launch it as follows:
 
-**Recruiter Portal:**
 ```bash
-cd frontend-recruiter
+cd frontend
 npm install
 npm run dev
 ```
 
-**Candidate Portal:**
-```bash
-cd frontend-candidate
-npm install
-npm run dev
-```
-
-Recruiter applications are served at `http://localhost:5173/` and Candidates at `http://localhost:5174/` (or matching configured Vite dev server ports). Recruiters must register and can be approved by logging in to the Django Admin console at `http://localhost:8000/admin/`.
+The unified React portal runs on `http://localhost:5173/` by default. Recruiter workflows (Login, Dashboards, Live Monitoring) and Candidate workflows (Waiting Room, System Checks, Active Interviews) are dynamically managed and routed under this single running instance! Recruiters must register and can be approved by logging in to the Django Admin console at `http://localhost:8000/admin/`.
 
 ---
 

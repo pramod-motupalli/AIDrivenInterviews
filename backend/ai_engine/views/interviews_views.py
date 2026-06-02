@@ -66,9 +66,9 @@ class InviteCandidateView(APIView):
         # Create Interview Session
         session_token = str(uuid.uuid4())
         # Link 1: time-bound candidate interview link
-        invite_link = f"{settings.CANDIDATE_FRONTEND_URL}/interview/{session_token}"
+        invite_link = f"{settings.FRONTEND_URL}/interview/{session_token}"
         # Link 2: permanent recruiter tracking link
-        tracking_link = f"{settings.RECRUITER_FRONTEND_URL}/recruiter/interviews/{session_token}/track"
+        tracking_link = f"{settings.FRONTEND_URL}/recruiter/interviews/{session_token}/track"
 
         ats_score = request.data.get('ats_score')
         skills = request.data.get('skills', [])
@@ -1022,11 +1022,25 @@ class AnomalyLogView(APIView):
             
             snapshot_url = ""
             if image:
-                from django.core.files.storage import default_storage
                 import uuid
                 remote_path = f"anomalies/{interview.id}_{uuid.uuid4()}.png"
-                saved_path = default_storage.save(remote_path, image)
-                snapshot_url = request.build_absolute_uri(default_storage.url(saved_path))
+                try:
+                    from django.core.files.storage import default_storage
+                    saved_path = default_storage.save(remote_path, image)
+                    snapshot_url = request.build_absolute_uri(default_storage.url(saved_path))
+                except Exception as e:
+                    print(f"Failed to upload anomaly image to S3/Supabase: {e}. Falling back to local storage.")
+                    try:
+                        from django.core.files.storage import FileSystemStorage
+                        from django.conf import settings
+                        fs = FileSystemStorage(location=settings.MEDIA_ROOT, base_url=settings.MEDIA_URL)
+                        
+                        # We need to reset the file pointer because it might have been read by default_storage
+                        image.seek(0)
+                        saved_path = fs.save(remote_path, image)
+                        snapshot_url = request.build_absolute_uri(fs.url(saved_path))
+                    except Exception as fallback_e:
+                        print(f"Fallback local storage also failed: {fallback_e}")
             
             anomaly = AnomalyLog.objects.create(
                 interview=interview,
