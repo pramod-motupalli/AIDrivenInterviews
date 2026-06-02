@@ -138,11 +138,13 @@ export default function Reports() {
                       </td>
                       <td className="px-6 py-5">
                         <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide border ${
-                          isRecommended 
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
-                            : 'bg-gray-50 text-gray-500 border-gray-100'
+                          report.status === 'rejected'
+                            ? 'bg-red-50 text-red-700 border-red-100'
+                            : isRecommended 
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
+                              : 'bg-gray-50 text-gray-500 border-gray-100'
                         }`}>
-                          {report.status}
+                          {report.status === 'shortlisted' ? 'Hired' : report.status === 'rejected' ? 'Rejected' : report.status}
                         </span>
                       </td>
                       <td className="px-6 py-5">
@@ -201,11 +203,13 @@ export default function Reports() {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
                     <div className="self-start sm:self-auto">
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${
-                        isRecommended 
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
-                          : 'bg-gray-50 text-gray-500 border-gray-100'
+                        report.status === 'rejected'
+                          ? 'bg-red-50 text-red-700 border-red-100'
+                          : isRecommended 
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
+                            : 'bg-gray-50 text-gray-500 border-gray-100'
                       }`}>
-                        {report.status}
+                        {report.status === 'shortlisted' ? 'Hired' : report.status === 'rejected' ? 'Rejected' : report.status}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">

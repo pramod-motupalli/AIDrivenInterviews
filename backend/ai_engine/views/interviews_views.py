@@ -180,6 +180,35 @@ class CandidateDeleteView(APIView):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+import threading
+from django.core.cache import cache
+
+def finalize_abandoned(interview_id):
+    try:
+        from ai_engine.models import Interview
+        if cache.get(f"abandon_pending_{interview_id}"):
+            interview = Interview.objects.get(id=interview_id)
+            if interview.status == 'in_progress':
+                interview.status = 'malpractice'
+                interview.save()
+                generate_interview_report(interview)
+    except Exception as e:
+        print(f"Error in finalize_abandoned: {e}")
+
+class AbandonSessionView(APIView):
+    permission_classes = [AllowAny]
+    def post(self, request):
+        token = request.data.get('token')
+        if token:
+            try:
+                from ai_engine.models import Interview
+                interview = Interview.objects.get(session_token=token)
+                cache.set(f"abandon_pending_{interview.id}", True, 15)
+                threading.Timer(10.0, finalize_abandoned, args=[interview.id]).start()
+            except Interview.DoesNotExist:
+                pass
+        return Response(status=status.HTTP_200_OK)
+
 class ValidateSessionView(APIView):
     permission_classes = [AllowAny]
 
@@ -194,6 +223,15 @@ class ValidateSessionView(APIView):
             # Block retests for completed or malpractice/terminated sessions
             if interview.status in ['completed', 'malpractice', 'shortlisted', 'rejected']:
                 return Response({"error": "This interview link has already been used and is no longer valid."}, status=status.HTTP_403_FORBIDDEN)
+            
+            # If the session is currently in progress, only allow joining if it's a page refresh (same tab)
+            if interview.status == 'in_progress':
+                is_refresh = request.GET.get('is_refresh') == 'true'
+                if not is_refresh:
+                    return Response({"error": "This interview session is already active or was abandoned. You cannot rejoin it from a new window."}, status=status.HTTP_403_FORBIDDEN)
+                else:
+                    from django.core.cache import cache
+                    cache.delete(f"abandon_pending_{interview.id}")
             
             # Try to extract name if not already set
             if not interview.candidate_name and interview.resume_text:
@@ -280,8 +318,13 @@ class StartInterviewView(APIView):
                     }
                 )
             
+            # 3. Fetch existing responses if any to support page reloads
+            existing_responses = InterviewResponse.objects.filter(interview=interview).order_by('question_index')
+            answers_dict = {str(r.question_index): r.answer_text for r in existing_responses}
+
             return Response({
                 "questions": interview.question_bank,
+                "answers": answers_dict,
                 "candidate_name": interview.candidate_name or interview.candidate.email,
                 "job_title": interview.job.title,
                 "status": interview.status
@@ -805,6 +848,7 @@ class ReportsView(APIView):
                     "overall_score": report.overall_score,
                     "overall_summary": report.overall_summary,
                     "recommendation": report.recommendation,
+                    "interview_status": report.interview.status,
                     "strengths": clean_list(report.strengths),
                     "weaknesses": clean_list(report.weaknesses),
                     "transcript": transcript,
@@ -831,6 +875,8 @@ class ReportsView(APIView):
                 else:
                     match_tier = "Low Match"
 
+                status_val = "shortlisted" if r.interview.status == "shortlisted" else "rejected" if r.interview.status == "rejected" else (r.recommendation or "Maybe")
+                
                 reports_list.append({
                     "id": str(r.interview.id),
                     "name": r.interview.candidate_name or r.interview.candidate.email,
@@ -838,7 +884,7 @@ class ReportsView(APIView):
                     "role": r.interview.job.title,
                     "score": score,
                     "match": match_tier,
-                    "status": r.recommendation or "Maybe",
+                    "status": status_val,
                     "created_at": r.created_at.strftime('%Y-%m-%d')
                 })
             

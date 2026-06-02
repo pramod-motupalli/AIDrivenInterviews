@@ -29,7 +29,17 @@ const ActiveInterview = () => {
   const [isPinned, setIsPinned] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [timeLeft, setTimeLeft] = useState(1800);
+  const [timeLeft, setTimeLeft] = useState(() => {
+    const interviewId = localStorage.getItem('interview_id');
+    const storageKey = `interview_start_timestamp_${interviewId}`;
+    const savedStart = localStorage.getItem(storageKey);
+    if (savedStart) {
+      const elapsed = Math.floor((Date.now() - parseInt(savedStart, 10)) / 1000);
+      return Math.max(0, 1800 - elapsed);
+    }
+    localStorage.setItem(storageKey, Date.now().toString());
+    return 1800;
+  });
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
@@ -61,6 +71,39 @@ const ActiveInterview = () => {
       startInterview();
     }
   }, [questions.length, loading, startInterview]);
+
+  useEffect(() => {
+    // Disable Back Button
+    window.history.pushState(null, null, window.location.href);
+    const handlePopState = () => {
+      window.history.go(1);
+    };
+    window.addEventListener('popstate', handlePopState);
+
+    // Warn on reload
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Abandon on close
+    const handleUnload = () => {
+      const token = localStorage.getItem('interview_session_token');
+      if (token && !isComplete) {
+        const formData = new FormData();
+        formData.append('token', token);
+        navigator.sendBeacon(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'}/interviews/abandon-session/`, formData);
+      }
+    };
+    window.addEventListener('unload', handleUnload);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('unload', handleUnload);
+    };
+  }, [isComplete]);
 
   useEffect(() => {
     if (warningMessage) {

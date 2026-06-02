@@ -120,10 +120,21 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
         # 2. Save profile fields → profile table
         if profile_data and ProfileModel:
-            profile, _ = ProfileModel.objects.get_or_create(user=instance)
+            profile = self._get_profile(instance)
+            if not profile:
+                profile = ProfileModel(user=instance)
+                
             for field, value in profile_data.items():
                 if hasattr(profile, field):
                     setattr(profile, field, value)
             profile.save()
+            
+            # Manually update the instance's cached property so to_representation sees the fresh data
+            if instance.role == 'recruiter':
+                instance.recruiter_profile = profile
+            elif instance.role == 'candidate':
+                instance.candidate_profile = profile
+            elif instance.role == 'admin':
+                instance.admin_profile = profile
 
         return instance

@@ -7,6 +7,7 @@ from ai_engine.models import Notification
 
 class NotificationSerializer(serializers.ModelSerializer):
     formatted_time = serializers.SerializerMethodField()
+    id = serializers.CharField()
 
     class Meta:
         model = Notification

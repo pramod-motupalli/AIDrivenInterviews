@@ -1,25 +1,25 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 
-const SILENCE_TIMEOUT_MS = 4000;   // fire onSilenceDetected after 4 s of no new text
+const SILENCE_TIMEOUT_MS = 10000;
 
 export default function useVoiceStream({ onSilenceDetected } = {}) {
-  const [isListening, setIsListening]     = useState(false);
-  const [amplitude, setAmplitude]         = useState(0);
+  const [isListening, setIsListening] = useState(false);
+  const [amplitude, setAmplitude] = useState(0);
   const [voiceTranscript, setVoiceTranscript] = useState("");
 
-  const audioContextRef    = useRef(null);
-  const streamRef          = useRef(null);
-  const analyserRef        = useRef(null);
-  const animFrameRef       = useRef(null);
-  const recognitionRef     = useRef(null);
-  const silenceTimerRef    = useRef(null);
-  const lastTextRef        = useRef("");
-  const hasFatalErrorRef   = useRef(false);
+  const wsRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const streamRef = useRef(null);
+  const processorRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const silenceTimerRef = useRef(null);
+  const backendFinalTextRef = useRef("");
+  const accumulatedBrowserTextRef = useRef("");
+  const hasFatalErrorRef = useRef(false);
 
-  const onSilenceRef       = useRef(onSilenceDetected);
+  const onSilenceRef = useRef(onSilenceDetected);
   useEffect(() => { onSilenceRef.current = onSilenceDetected; }, [onSilenceDetected]);
 
-  // Cleanup function for stopping listening state
   const stopListening = useCallback(() => {
     setIsListening(false);
     setAmplitude(0);
@@ -27,10 +27,6 @@ export default function useVoiceStream({ onSilenceDetected } = {}) {
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = null;
-    }
-    if (animFrameRef.current) {
-      cancelAnimationFrame(animFrameRef.current);
-      animFrameRef.current = null;
     }
 
     try {
@@ -42,7 +38,16 @@ export default function useVoiceStream({ onSilenceDetected } = {}) {
         recognitionRef.current = null;
       }
     } catch (e) {
-      console.warn("[STT] Error stopping recognition:", e);
+      console.warn("[STT] Error stopping browser recognition:", e);
+    }
+
+    try {
+      if (processorRef.current) {
+        processorRef.current.disconnect();
+        processorRef.current = null;
+      }
+    } catch (e) {
+      console.warn("[STT] Error disconnecting processor:", e);
     }
 
     try {
@@ -50,129 +55,213 @@ export default function useVoiceStream({ onSilenceDetected } = {}) {
     } catch (e) {}
 
     try {
-      audioContextRef.current?.close();
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close();
+      }
     } catch (e) {}
 
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+
     audioContextRef.current = null;
-    analyserRef.current     = null;
-    streamRef.current       = null;
-    lastTextRef.current     = "";
+    streamRef.current = null;
+    backendFinalTextRef.current = "";
+    accumulatedBrowserTextRef.current = "";
   }, []);
 
   const startListening = useCallback(async () => {
     if (isListening) return;
-
     hasFatalErrorRef.current = false;
 
-    // 1. Initialise Speech Recognition
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      console.warn("[STT] Browser Speech Recognition not supported.");
-      return;
+    const browserHasProducedTextRef = { current: false };
+    
+    if (SpeechRecognition) {
+      try {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = "en-IN";
+
+        let currentSessionFinalText = "";
+
+        recognition.onresult = (event) => {
+          let finalText = "";
+          let interimText = "";
+          for (let i = 0; i < event.results.length; ++i) {
+            const segment = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalText += (finalText ? " " : "") + segment.trim();
+            } else {
+              interimText += (interimText ? " " : "") + segment.trim();
+            }
+          }
+          currentSessionFinalText = finalText;
+          
+          let fullFinal = accumulatedBrowserTextRef.current;
+          if (finalText) {
+            fullFinal += (fullFinal ? " " : "") + finalText;
+          }
+          const combinedText = (fullFinal + (fullFinal && interimText ? " " : "") + interimText).trim();
+          
+          if (combinedText) {
+            browserHasProducedTextRef.current = true;
+            // Update UI instantly with browser's fast guess
+            setVoiceTranscript(combinedText);
+
+            // Reset the silence timer on any speech detection
+            if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+            silenceTimerRef.current = setTimeout(() => {
+              // Silence detected! Tell the backend to finalize the robust AI transcript
+              if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                wsRef.current.send(JSON.stringify({ type: "finalize" }));
+              }
+            }, SILENCE_TIMEOUT_MS);
+          }
+        };
+
+        recognition.onerror = (e) => {
+          if (['not-allowed', 'audio-capture', 'service-not-allowed'].includes(e.error)) {
+            hasFatalErrorRef.current = true;
+          }
+        };
+
+        recognition.onend = () => {
+          // Save this session's final text before restarting
+          if (currentSessionFinalText) {
+            accumulatedBrowserTextRef.current += (accumulatedBrowserTextRef.current ? " " : "") + currentSessionFinalText;
+            currentSessionFinalText = "";
+          }
+          
+          if (recognitionRef.current && !hasFatalErrorRef.current) {
+            setTimeout(() => {
+              if (recognitionRef.current && !hasFatalErrorRef.current) {
+                try { recognition.start(); } catch (err) {}
+              }
+            }, 100);
+          }
+        };
+
+        recognitionRef.current = recognition;
+        recognition.start();
+      } catch (e) {
+        console.warn("[STT] Browser Speech API init failed, visuals will rely on backend.", e);
+      }
     }
 
+    // --- 2. SETUP BACKEND WEBSOCKET (For Robust Final Accuracy) ---
     try {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = "en-IN"; // Optimized for Indian-English dialect/accent profiles to maximize transcription accuracy
+      const sessionToken = localStorage.getItem('interview_session_token');
+      if (!sessionToken) {
+        console.warn("[STT] No session token found.");
+        hasFatalErrorRef.current = true;
+        return;
+      }
 
-      recognition.onresult = (event) => {
-        let finalText = "";
-        let interimText = "";
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+      const urlObj = new URL(API_BASE);
+      const wsProtocol = urlObj.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProtocol}//${urlObj.host}/ws/stt/${sessionToken}/?token=${sessionToken}`;
+      
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
 
-        for (let i = 0; i < event.results.length; ++i) {
-          const segment = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            finalText += (finalText ? " " : "") + segment.trim();
-          } else {
-            interimText += (interimText ? " " : "") + segment.trim();
-          }
-        }
+      ws.onopen = () => console.log("[STT] WebSocket connected to Faster-Whisper");
 
-        const combinedText = (finalText + (finalText && interimText ? " " : "") + interimText).trim();
-        if (combinedText) {
-          setVoiceTranscript(combinedText);
-          lastTextRef.current = combinedText;
-
-          // Reset the silence timer
-          if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-          silenceTimerRef.current = setTimeout(() => {
-            // Silence detected: stop the microphone and trigger final submission
-            const textToSubmit = lastTextRef.current;
-            stopListening();
-            onSilenceRef.current?.(textToSubmit);
-          }, SILENCE_TIMEOUT_MS);
-        }
-      };
-
-      recognition.onerror = (e) => {
-        if (e.error !== 'no-speech' && e.error !== 'aborted') {
-          console.error("[STT] Speech recognition error:", e.error);
-        }
-        if (['not-allowed', 'audio-capture', 'service-not-allowed'].includes(e.error)) {
-          hasFatalErrorRef.current = true;
-        }
-      };
-
-      recognition.onend = () => {
-        if (recognitionRef.current && !hasFatalErrorRef.current) {
-          // Delayed restart to allow browser threads to completely clean up before starting again
-          setTimeout(() => {
-            if (recognitionRef.current && !hasFatalErrorRef.current) {
-              try {
-                recognition.start();
-              } catch (err) {
-                console.warn("[STT] Restart failed, marking as not listening:", err);
-                setIsListening(false);
-              }
-            }
-          }, 100);
-        } else {
-          setIsListening(false);
-        }
-      };
-
-      recognitionRef.current = recognition;
-
-      // 2. Initialise Audio Analyzer (purely for visual amplitude animation)
-      // Isolated in a separate try-catch and IIFE so that if it hangs or fails,
-      // it does NOT prevent the actual Speech Recognition engine from running.
-      (async () => {
+      ws.onmessage = (event) => {
         try {
-          const AudioCtx = window.AudioContext || window.webkitAudioContext;
-          if (AudioCtx) {
-            const audioContext = new AudioCtx();
-            audioContextRef.current = audioContext;
-
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            streamRef.current = stream;
-
-            const source = audioContext.createMediaStreamSource(stream);
-            const analyser = audioContext.createAnalyser();
-            analyser.fftSize = 32;
-            source.connect(analyser);
-            analyserRef.current = analyser;
-
-            const dataArray = new Uint8Array(analyser.frequencyBinCount);
-            const tick = () => {
-              if (!analyserRef.current) return;
-              analyserRef.current.getByteFrequencyData(dataArray);
-              const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-              setAmplitude(Math.min(avg / 5, 20));
-              animFrameRef.current = requestAnimationFrame(tick);
-            };
-            tick();
+          const data = JSON.parse(event.data);
+          if (data.type === 'transcript') {
+            const text = data.text;
+            
+            // Reset silence timer using backend text as a fallback
+            if (text.trim() !== "") {
+              if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+              silenceTimerRef.current = setTimeout(() => {
+                if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                  wsRef.current.send(JSON.stringify({ type: "finalize" }));
+                }
+              }, SILENCE_TIMEOUT_MS);
+            }
+            
+            // If the browser API isn't producing text, fallback to backend's throttled updates
+            if (!browserHasProducedTextRef.current && !data.is_final) {
+              setVoiceTranscript(text);
+            }
+            
+            // If the backend sends is_final = true, this is the final trigger
+            if (data.is_final) {
+              backendFinalTextRef.current = text;
+              
+              // The browser's native STT locks in mistakes if the user takes a short pause (firing onend).
+              // The backend Faster-Whisper model transcribes the ENTIRE audio buffer seamlessly, fixing all 
+              // grammatical and contextual errors that the browser locked in.
+              // We use the backend's text as the absolute source of truth for submission!
+              const textToSubmit = backendFinalTextRef.current || voiceTranscript;
+                                     
+              stopListening();
+              onSilenceRef.current?.(textToSubmit);
+            }
           }
-        } catch (audioErr) {
-          console.warn("[STT] Audio analyzer initialization failed, continuing speech recognition anyway:", audioErr);
+        } catch(e) {
+          console.error("[STT] Error parsing WS message", e);
         }
-      })();
+      };
 
-      recognition.start();
+      ws.onerror = () => hasFatalErrorRef.current = true;
+      ws.onclose = () => setIsListening(false);
+
+      // --- 3. SETUP AUDIO CONTEXT (To send raw bytes to Backend) ---
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const audioContext = new AudioCtx({ sampleRate: 16000 });
+      audioContextRef.current = audioContext;
+
+      const source = audioContext.createMediaStreamSource(stream);
+      const processor = audioContext.createScriptProcessor(4096, 1, 1);
+      processorRef.current = processor;
+      
+      source.connect(processor);
+      processor.connect(audioContext.destination);
+
+      processor.onaudioprocess = (e) => {
+        if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+        
+        const inputData = e.inputBuffer.getChannelData(0);
+        
+        // Calculate amplitude for UI
+        let sum = 0;
+        for(let i = 0; i < inputData.length; i++) sum += Math.abs(inputData[i]);
+        setAmplitude(Math.min(((sum / inputData.length) * 100), 20));
+
+        let outputData = inputData;
+        if (audioContext.sampleRate !== 16000) {
+            const ratio = audioContext.sampleRate / 16000;
+            const newLength = Math.round(inputData.length / ratio);
+            const resampled = new Float32Array(newLength);
+            for (let i = 0; i < newLength; i++) {
+                resampled[i] = inputData[Math.round(i * ratio)] || 0;
+            }
+            outputData = resampled;
+        }
+        
+        const pcm16 = new Int16Array(outputData.length);
+        for (let i = 0; i < outputData.length; i++) {
+            const s = Math.max(-1, Math.min(1, outputData[i]));
+            pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        }
+        
+        wsRef.current.send(pcm16.buffer);
+      };
+
       setIsListening(true);
       setVoiceTranscript("");
-      lastTextRef.current = "";
+      backendFinalTextRef.current = "";
+
     } catch (err) {
       console.error("[STT] Start failed:", err);
       stopListening();

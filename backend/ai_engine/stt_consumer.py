@@ -22,7 +22,7 @@ def _load_model():
     if _whisper_model is None:
         from faster_whisper import WhisperModel
         _whisper_model = WhisperModel(
-            "tiny.en",
+            "base.en",
             device="cpu",
             compute_type="int8",
         )
@@ -41,6 +41,8 @@ class STTConsumer(AsyncWebsocketConsumer):
 
         self.audio_buffer = np.array([], dtype=np.float32)
         self.current_transcript = ""
+        self.is_transcribing = False
+        self.last_transcribe_time = 0
         await self.accept()
         print(f"[STT] Connected: {user.email}")
 
@@ -49,23 +51,30 @@ class STTConsumer(AsyncWebsocketConsumer):
         print(f"[STT] Disconnected ({close_code})")
 
     async def receive(self, bytes_data=None, text_data=None):
+        import time
         # ── Binary frame: raw Int16 PCM at 16 kHz ────────────────────────────
         if bytes_data:
             chunk = np.frombuffer(bytes_data, dtype=np.int16).astype(np.float32) / 32768.0
             self.audio_buffer = np.concatenate([self.audio_buffer, chunk])
 
-            # Transcribe only when we have ≥1 second of audio (16 000 samples)
-            if len(self.audio_buffer) < 16_000:
+            now = time.time()
+            # Transcribe only when we have >= 1 sec of audio, not transcribing, and it's been 2s since last transcription
+            if len(self.audio_buffer) < 16_000 or self.is_transcribing or (now - self.last_transcribe_time < 2.0):
                 return
 
-            transcript = await self._transcribe()
-            if transcript and transcript.strip() != self.current_transcript.strip():
-                self.current_transcript = transcript.strip()
-                await self.send(json.dumps({
-                    "type": "transcript",
-                    "text": self.current_transcript,
-                    "is_final": False,
-                }))
+            self.is_transcribing = True
+            self.last_transcribe_time = now
+            try:
+                transcript = await self._transcribe()
+                if transcript and transcript.strip() != self.current_transcript.strip():
+                    self.current_transcript = transcript.strip()
+                    await self.send(json.dumps({
+                        "type": "transcript",
+                        "text": self.current_transcript,
+                        "is_final": False,
+                    }))
+            finally:
+                self.is_transcribing = False
 
         # ── Text frame: { "type": "finalize" } ───────────────────────────────
         elif text_data:
@@ -104,15 +113,24 @@ class STTConsumer(AsyncWebsocketConsumer):
 
     @sync_to_async
     def _get_user_from_query(self):
+        from rest_framework_simplejwt.tokens import AccessToken
+        from django.contrib.auth import get_user_model
+        from .models import Interview
+        User = get_user_model()
+        qs = parse_qs(self.scope.get("query_string", b"").decode())
+        token = qs.get("token", [None])[0]
+        if not token:
+            return None
+            
         try:
-            from rest_framework_simplejwt.tokens import AccessToken
-            from django.contrib.auth import get_user_model
-            User = get_user_model()
-            qs = parse_qs(self.scope.get("query_string", b"").decode())
-            jwt = qs.get("token", [None])[0]
-            if not jwt:
-                return None
-            payload = AccessToken(jwt)
+            payload = AccessToken(token)
             return User.objects.get(id=payload["user_id"])
         except Exception:
-            return None
+            # Fallback for candidates connecting with interview_session_token
+            try:
+                interview = Interview.objects.get(session_token=token)
+                class DummyUser:
+                    email = f"Candidate: {interview.candidate_name}"
+                return DummyUser()
+            except Exception:
+                return None

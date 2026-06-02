@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mic, Video, Settings, Wifi, ChevronRight, Shield } from 'lucide-react';
+import { Wifi, ChevronRight, Shield, AlertTriangle } from 'lucide-react';
 import { useInterview } from '../context/InterviewContext';
 const MOCK_SESSION_START = Date.now() + 30 * 1000; // 30 seconds from now
 
@@ -20,6 +20,14 @@ const WaitingRoom = () => {
   const displayInitials = recruiterName.substring(0, 2).toUpperCase();
 
   const handleJoin = async () => {
+    try {
+      if (document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch(e) {
+      console.warn("Fullscreen request denied or not supported.", e);
+    }
+
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(t => t.stop());
     }
@@ -88,11 +96,7 @@ const WaitingRoom = () => {
                   Stable Connection
                 </div>
               </div>
-              <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 flex gap-3 z-30">
-                <button className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/15 backdrop-blur-xl border border-white/20 text-white flex items-center justify-center hover:bg-white/25 transition-all active:scale-95 shadow-lg min-w-[40px] min-h-[40px]"><Mic size={18} /></button>
-                <button className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/15 backdrop-blur-xl border border-white/20 text-white flex items-center justify-center hover:bg-white/25 transition-all active:scale-95 shadow-lg min-w-[40px] min-h-[40px]"><Video size={18} /></button>
-                <button className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/15 backdrop-blur-xl border border-white/20 text-white flex items-center justify-center hover:bg-white/25 transition-all active:scale-95 shadow-lg min-w-[40px] min-h-[40px]"><Settings size={18} /></button>
-              </div>
+
             </div>
           </div>
 
@@ -128,6 +132,35 @@ const WaitingRoom = () => {
                   <div className="text-xs sm:text-sm font-medium text-slate-500">Interviewer</div>
                 </div>
               </div>
+            </div>
+
+            <div className="bg-amber-50 rounded-2xl sm:rounded-[20px] border border-amber-200/60 p-5 sm:p-6 shadow-sm">
+              <div className="flex items-center gap-2 mb-3 text-amber-700">
+                <AlertTriangle size={18} className="stroke-[2.5px]" />
+                <h3 className="font-bold text-sm sm:text-base tracking-tight">Mandatory Interview Protocols</h3>
+              </div>
+              <ul className="space-y-2.5 text-xs sm:text-sm text-amber-900/80 font-medium leading-relaxed">
+                <li className="flex items-start gap-2">
+                  <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
+                  <span><strong>Articulate Clearly:</strong> Project your voice with clarity and precision. Avoid murmuring or rushing your words to ensure accurate AI transcription.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
+                  <span><strong>Strictly Solo Environment:</strong> You must be the sole individual present in the camera's field of view at all times.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
+                  <span><strong>No Extraneous Devices:</strong> The use of secondary devices, including smartphones, tablets, or smartwatches, is strictly prohibited.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
+                  <span><strong>Focus and Engagement:</strong> Maintain continuous eye contact with the camera. Tab switching or minimizing the browser window will be flagged as a malpractice violation.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
+                  <span><strong>Professional Conduct:</strong> Approach this session with the same level of decorum as an in-person interview.</span>
+                </li>
+              </ul>
             </div>
 
             <div className="mt-2">

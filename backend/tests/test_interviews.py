@@ -5,8 +5,8 @@ import pytest
 from django.urls import reverse
 from rest_framework.test import APIClient
 from django.contrib.auth import get_user_model
-from jobs.models import Job
-from interviews.models import Interview
+from ai_engine.models import Job
+from ai_engine.models import Interview
 import uuid
 
 User = get_user_model()

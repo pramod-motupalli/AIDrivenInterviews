@@ -149,22 +149,26 @@ export default function ReportDetail() {
             />
           </div>
           <div className="min-w-0">
-            <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">{reportData.candidate_name}</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">{reportData.candidate_name}</h1>
+              {reportData.interview_status === 'rejected' && (
+                <div className="px-2.5 py-1 bg-red-50 text-red-700 font-bold rounded-md border border-red-200 text-xs flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[14px]">cancel</span>
+                  Rejected
+                </div>
+              )}
+              {reportData.interview_status === 'shortlisted' && (
+                <div className="px-2.5 py-1 bg-emerald-50 text-emerald-700 font-bold rounded-md border border-emerald-200 text-xs flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                  Hired
+                </div>
+              )}
+            </div>
             <p className="text-xs md:text-sm text-gray-500 mt-0.5 truncate">{reportData.job_title} • {reportData.created_at}</p>
           </div>
         </div>
         <div className="flex items-center gap-2 md:gap-3">
-          {reportData.status?.toLowerCase() === 'rejected' || reportData.status?.toLowerCase() === 'reject' ? (
-            <div className="px-5 py-2.5 bg-red-50 text-red-700 font-bold rounded-lg border border-red-200 shadow-sm flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px]">cancel</span>
-              Rejected
-            </div>
-          ) : reportData.status?.toLowerCase() === 'shortlisted' || reportData.status?.toLowerCase() === 'hire' ? (
-            <div className="px-5 py-2.5 bg-emerald-50 text-emerald-700 font-bold rounded-lg border border-emerald-200 shadow-sm flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px]">check_circle</span>
-              Candidate Hired
-            </div>
-          ) : (
+          {reportData.interview_status !== 'rejected' && reportData.interview_status !== 'shortlisted' && (
             <>
               <button 
                 onClick={() => handleStatusUpdate('reject')}

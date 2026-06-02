@@ -33,7 +33,7 @@ export default function Jobs() {
   const [deletingId, setDeletingId] = useState(null);
 
   // Pipeline Tabs and Pagination states
-  const [pipelineSubTab, setPipelineSubTab] = useState('all'); // 'all', 'awaiting_invite', 'scheduled_live', 'completed', 'rejected'
+  const [pipelineSubTab, setPipelineSubTab] = useState('all'); // 'all', 'awaiting_invite', 'scheduled_live', 'completed', 'hired', 'rejected'
   const [visibleCount, setVisibleCount] = useState(6);
 
   useEffect(() => {
@@ -66,7 +66,8 @@ export default function Jobs() {
         });
         if (res.ok) {
           const data = await res.json();
-          const mapped = data.map(item => ({
+          const results = Array.isArray(data) ? data : (data.results || []);
+          const mapped = results.map(item => ({
             id: item.id,
             name: item.candidate_name || item.candidate_email,
             email: item.candidate_email,
@@ -86,15 +87,15 @@ export default function Jobs() {
           let localCandidates = JSON.parse(localStorage.getItem(`screened_candidates_${userEmail}`) || '[]');
           localCandidates = localCandidates.filter(c => !String(c.id).startsWith('mock-'));
           
-          // Create a map of API candidates by email for easy lookup
+          // Create a map of API candidates by id for easy lookup
           const apiCandidateMap = new Map();
-          mapped.forEach(c => apiCandidateMap.set(c.email, c));
+          mapped.forEach(c => apiCandidateMap.set(c.id, c));
 
           // Merge: For each local candidate, if they exist in API, use API data (to get updated status), else keep local
           const mergedList = localCandidates.map(localCand => {
-            if (apiCandidateMap.has(localCand.email)) {
-              const apiCand = apiCandidateMap.get(localCand.email);
-              apiCandidateMap.delete(localCand.email); // Remove from map so we don't add it twice
+            if (apiCandidateMap.has(localCand.id)) {
+              const apiCand = apiCandidateMap.get(localCand.id);
+              apiCandidateMap.delete(localCand.id); // Remove from map so we don't add it twice
               return { ...localCand, ...apiCand };
             }
             return localCand;
@@ -118,18 +119,22 @@ export default function Jobs() {
   const countAwaiting = screenedList.filter(c => c.status !== 'Interview Pending' && c.status !== 'Interview In Progress' && c.status !== 'Interview Completed' && c.status !== 'rejected').length;
   const countScheduledLive = screenedList.filter(c => c.status === 'Interview Pending' || c.status === 'Interview In Progress').length;
   const countCompleted = screenedList.filter(c => c.status === 'Interview Completed').length;
+  const countHired = screenedList.filter(c => c.status === 'shortlisted').length;
   const countRejected = screenedList.filter(c => c.status === 'rejected').length;
 
   // Filter candidates according to selected sub-tab
   const filteredCandidates = screenedList.filter(cand => {
     if (pipelineSubTab === 'awaiting_invite') {
-      return cand.status !== 'Interview Pending' && cand.status !== 'Interview In Progress' && cand.status !== 'Interview Completed' && cand.status !== 'rejected';
+      return cand.status !== 'Interview Pending' && cand.status !== 'Interview In Progress' && cand.status !== 'Interview Completed' && cand.status !== 'shortlisted' && cand.status !== 'rejected';
     }
     if (pipelineSubTab === 'scheduled_live') {
       return cand.status === 'Interview Pending' || cand.status === 'Interview In Progress';
     }
     if (pipelineSubTab === 'completed') {
       return cand.status === 'Interview Completed';
+    }
+    if (pipelineSubTab === 'hired') {
+      return cand.status === 'shortlisted';
     }
     if (pipelineSubTab === 'rejected') {
       return cand.status === 'rejected';
@@ -265,19 +270,19 @@ export default function Jobs() {
         const data = await res.json();
         setMessage({ type: 'success', text: `✅ Interview link sent to ${candidate.email}` });
         
-        // Update both list and detail statuses to include the real session_token
+        // Update both list and detail statuses to include the real session_token and real interview_id
         const updatedList = screenedList.map(c => 
-          c.id === candidate.id ? { ...c, status: 'Interview Pending', session_token: data.session_token } : c
+          c.id === candidate.id ? { ...c, id: data.interview_id, status: 'Interview Pending', session_token: data.session_token } : c
         );
         setScreenedList(updatedList);
         const userEmail = localStorage.getItem('email') || 'default';
         localStorage.setItem(`screened_candidates_${userEmail}`, JSON.stringify(updatedList));
 
         if (analysisResult && analysisResult.id === candidate.id) {
-          setAnalysisResult(prev => ({ ...prev, status: 'Interview Pending', session_token: data.session_token }));
+          setAnalysisResult(prev => ({ ...prev, id: data.interview_id, status: 'Interview Pending', session_token: data.session_token }));
         }
         if (selectedCandidate && selectedCandidate.id === candidate.id) {
-          setSelectedCandidate(prev => ({ ...prev, status: 'Interview Pending', session_token: data.session_token }));
+          setSelectedCandidate(prev => ({ ...prev, id: data.interview_id, status: 'Interview Pending', session_token: data.session_token }));
         }
       } else {
         const data = await res.json();
@@ -579,6 +584,19 @@ export default function Jobs() {
               </span>
             </button>
             <button
+              onClick={() => setPipelineSubTab('hired')}
+              className={`px-3 py-1.5 text-xs sm:text-sm font-bold rounded-lg cursor-pointer transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                pipelineSubTab === 'hired'
+                  ? 'bg-white text-emerald-600 shadow-sm border border-slate-100'
+                  : 'text-gray-500 hover:text-emerald-700'
+              }`}
+            >
+              Hired
+              <span className={`px-1.5 py-0.5 text-[10px] rounded-full font-black ${pipelineSubTab === 'hired' ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-200/60 text-gray-500'}`}>
+                {countHired}
+              </span>
+            </button>
+            <button
               onClick={() => setPipelineSubTab('rejected')}
               className={`px-3 py-1.5 text-xs sm:text-sm font-bold rounded-lg cursor-pointer transition-all flex items-center gap-1.5 whitespace-nowrap ${
                 pipelineSubTab === 'rejected'
@@ -663,6 +681,26 @@ export default function Jobs() {
                       <span className="text-xs font-extrabold text-emerald-600 flex items-center gap-1">
                         <span className="material-symbols-outlined text-[16px] text-emerald-500">check_circle</span>
                         Invite Sent
+                      </span>
+                    ) : cand.status === 'Interview In Progress' ? (
+                      <span className="text-xs font-extrabold text-blue-600 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[16px] text-blue-500 animate-spin">sync</span>
+                        In Progress
+                      </span>
+                    ) : cand.status === 'Interview Completed' ? (
+                      <span className="text-xs font-extrabold text-indigo-600 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[16px] text-indigo-500">task_alt</span>
+                        Completed
+                      </span>
+                    ) : cand.status === 'shortlisted' ? (
+                      <span className="text-xs font-extrabold text-emerald-600 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[16px] text-emerald-500">verified</span>
+                        Hired
+                      </span>
+                    ) : cand.status === 'rejected' ? (
+                      <span className="text-xs font-extrabold text-red-600 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[16px] text-red-500">cancel</span>
+                        Rejected
                       </span>
                     ) : (
                       <button 

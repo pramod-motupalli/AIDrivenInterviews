@@ -4,7 +4,7 @@ from ai_engine.views.interviews_views import (
     InviteCandidateView, ValidateSessionView, InterviewViewSet, 
     StartInterviewView, SubmitAnswerView, GetResultsView, SubmitReviewView,
     DashboardStatsView, ReportsView, LiveMonitoringDetailView, CandidateDeleteView,
-    AnomalyLogView
+    AnomalyLogView, AbandonSessionView
 )
 
 router = DefaultRouter()
@@ -24,4 +24,5 @@ urlpatterns = [
     path('reports/<str:pk>/', ReportsView.as_view(), name='reports_detail'),
     path('live-monitoring/<str:session_token>/', LiveMonitoringDetailView.as_view(), name='live_monitoring_detail'),
     path('anomaly/', AnomalyLogView.as_view(), name='log_anomaly'),
+    path('abandon-session/', AbandonSessionView.as_view(), name='abandon_session'),
 ]

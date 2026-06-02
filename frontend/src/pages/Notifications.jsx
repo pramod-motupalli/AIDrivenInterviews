@@ -68,7 +68,8 @@ export default function Notifications() {
     fetchNotificationsData();
   }, []);
 
-  const handleMarkAsRead = async (id) => {
+  const handleMarkAsRead = async (id, e) => {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
     try {
       const token = localStorage.getItem('access');
       const res = await fetch(`${API_BASE}/notifications/${id}/read/`, {
@@ -100,7 +101,8 @@ export default function Notifications() {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id, e) => {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
     try {
       const token = localStorage.getItem('access');
       const res = await fetch(`${API_BASE}/notifications/${id}/`, {
@@ -246,7 +248,7 @@ export default function Notifications() {
                   <div className="flex items-center gap-4 mt-2.5">
                     {notification.unread && (
                       <button 
-                        onClick={() => handleMarkAsRead(notification.id)}
+                        onClick={(e) => handleMarkAsRead(notification.id, e)}
                         className="text-[11px] font-bold text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
                       >
                         <span className="material-symbols-outlined text-[14px]">drafts</span>
@@ -254,7 +256,7 @@ export default function Notifications() {
                       </button>
                     )}
                     <button 
-                      onClick={() => handleDelete(notification.id)}
+                      onClick={(e) => handleDelete(notification.id, e)}
                       className="text-[11px] font-bold text-gray-400 hover:text-red-500 hover:underline cursor-pointer flex items-center gap-1"
                     >
                       <span className="material-symbols-outlined text-[14px]">delete</span>

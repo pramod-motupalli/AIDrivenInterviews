@@ -39,7 +39,7 @@ export const InterviewProvider = ({ children }) => {
         setCurrentIndex(loadedQuestions.length > 0 ? loadedQuestions.length - 1 : 0);
         setIsComplete(false);
       }
-      setAnswers({});
+      setAnswers(data.answers || {});
     } catch (error) {
       console.error('Failed to start interview:', error);
       setQuestions(MOCK_INTERVIEW_QUESTIONS);

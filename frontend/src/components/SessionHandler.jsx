@@ -16,9 +16,13 @@ const SessionHandler = () => {
       }
 
       try {
-        const response = await api.get(`/v1/interviews/validate-session/${token}/`);
+        const isRefresh = sessionStorage.getItem(`active_session_${token}`) === 'true';
+        const response = await api.get(`/v1/interviews/validate-session/${token}/?is_refresh=${isRefresh}`);
         
         if (response.data.valid) {
+          // Mark this specific browser tab as the active session tab
+          sessionStorage.setItem(`active_session_${token}`, 'true');
+
           // Clear any stale session data first
           localStorage.removeItem('token');
           localStorage.removeItem('access_token');
