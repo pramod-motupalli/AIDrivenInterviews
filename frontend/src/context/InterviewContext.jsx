@@ -90,9 +90,6 @@ export const InterviewProvider = ({ children }) => {
         }
         setIsComplete(true);
       } else if (data.next_question) {
-        // Wait for a couple of seconds so the candidate can breathe before the next question is spoken
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
         // Append the new dynamically generated question to the array
         setQuestions(prev => [
           ...prev, 

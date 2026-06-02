@@ -53,6 +53,7 @@ const ActiveInterview = () => {
   // Stable ref so silence callback always calls the latest handleSilenceSubmit
   const handleSilenceSubmitRef = useRef(null);
   const utteranceRef = useRef(null);
+  const hasStartedRef = useRef(false);
 
   const { isListening, amplitude, startListening, stopListening, transcript: voiceTranscript } = useVoiceStream({
     onSilenceDetected: useCallback((text) => handleSilenceSubmitRef.current?.(text), []),
@@ -67,7 +68,8 @@ const ActiveInterview = () => {
   useEffect(() => {
     // If the page is refreshed, state is lost. 
     // This auto-resumes the session from the backend if it's not already loading.
-    if (questions.length === 0 && !loading && startInterview) {
+    if (questions.length === 0 && !loading && startInterview && !hasStartedRef.current) {
+      hasStartedRef.current = true;
       startInterview();
     }
   }, [questions.length, loading, startInterview]);
@@ -211,13 +213,18 @@ const ActiveInterview = () => {
   }, [isComplete, terminationMessage, navigate, tabSwitchCount]);
 
   useEffect(() => {
-    cocoSsd.load().then(loadedModel => {
-      setModel(loadedModel);
-    }).catch(err => console.error("Failed to load COCO-SSD model", err));
+    // Disabled object detection completely to prevent main thread freezing
+    // const timer = setTimeout(() => {
+    //   cocoSsd.load().then(loadedModel => {
+    //     setModel(loadedModel);
+    //   }).catch(err => console.error("Failed to load COCO-SSD model", err));
+    // }, 2000);
+    // return () => clearTimeout(timer);
   }, []);
 
-  // Object Detection Loop
+  // Object Detection Loop (Disabled to prevent freezing)
   useEffect(() => {
+    /*
     let animationId;
     let lastDetectionTime = 0;
     // Debounce alerts so we don't spam the UI
@@ -276,6 +283,7 @@ const ActiveInterview = () => {
     }
 
     return () => cancelAnimationFrame(animationId);
+    */
   }, [model, isComplete, terminationMessage]);
 
   const progress = questions.length ? Math.round(((currentIndex + 1) / questions.length) * 100) : 0;

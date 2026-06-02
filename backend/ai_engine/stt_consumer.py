@@ -58,8 +58,8 @@ class STTConsumer(AsyncWebsocketConsumer):
             self.audio_buffer = np.concatenate([self.audio_buffer, chunk])
 
             now = time.time()
-            # Transcribe only when we have >= 1 sec of audio, not transcribing, and it's been 2s since last transcription
-            if len(self.audio_buffer) < 16_000 or self.is_transcribing or (now - self.last_transcribe_time < 2.0):
+            # Transcribe only when we have >= 0.5 sec of audio, not transcribing, and it's been 0.5s since last transcription
+            if len(self.audio_buffer) < 8_000 or self.is_transcribing or (now - self.last_transcribe_time < 0.5):
                 return
 
             self.is_transcribing = True
@@ -105,6 +105,7 @@ class STTConsumer(AsyncWebsocketConsumer):
                 vad_filter=True,
                 vad_parameters={"min_silence_duration_ms": 300},
                 beam_size=1,
+                initial_prompt="This is a professional job interview. The candidate is providing clear, detailed answers.",
             )
             return " ".join(seg.text for seg in segments).strip()
         except Exception as e:
