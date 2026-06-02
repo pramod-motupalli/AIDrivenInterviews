@@ -53,6 +53,8 @@ graph TD
 *   **Contextual Interviewing**: Generates technical questions customized around the specific Job Description (JD) and the candidate's resume keywords.
 *   **Adaptive Difficulty**: Dynamically adapts interview question difficulty on-the-fly. Excellent candidate responses trigger highly technical, architecture-level inquiries, while weaker responses downscale difficulty to verify core foundational engineering concepts.
 *   **Real-time WebSocket Streaming**: Leverages **Django Channels** and **Redis** to conduct instant question-answer loops, minimizing latency and rendering an immersive conversational atmosphere.
+*   **Lightning-Fast Voice STT**: Integrates Groq's `whisper-large-v3` over WebSockets for hyper-accurate, low-latency Speech-to-Text, capturing every nuance of a candidate's response.
+*   **Persistent Audio Graph Architecture**: Utilizes a robust singleton `AudioContext` and dynamically spawned `ScriptProcessorNode`s in the browser to guarantee zero microphone dropouts and seamless transition between questions.
 
 ### 2. 📝 Rigorous 3D Response Evaluation
 *   Every technical answer submitted by the candidate is evaluated in real-time by a specialized prompt routing layer across three key dimensions:
