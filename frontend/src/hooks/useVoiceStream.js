@@ -1,15 +1,26 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 
-const SILENCE_TIMEOUT_MS = 10000;
+const SILENCE_TIMEOUT_MS = 2500;
 
-export default function useVoiceStream({ onSilenceDetected } = {}) {
-  const [isListening, setIsListening] = useState(false);
+export default function useVoiceStream({ onSilenceDetected, existingStream } = {}) {
+  const [isListening, setReactIsListening] = useState(false);
+  const isListeningRef = useRef(false);
+  const setIsListening = useCallback((val) => {
+    isListeningRef.current = val;
+    setReactIsListening(val);
+  }, []);
+
+  const existingStreamRef = useRef(existingStream);
+  useEffect(() => {
+    existingStreamRef.current = existingStream;
+  }, [existingStream]);
   const [amplitude, setAmplitude] = useState(0);
   const [voiceTranscript, setVoiceTranscript] = useState("");
 
   const wsRef = useRef(null);
   const audioContextRef = useRef(null);
   const streamRef = useRef(null);
+  const sourceRef = useRef(null);
   const processorRef = useRef(null);
   const recognitionRef = useRef(null);
   const silenceTimerRef = useRef(null);
@@ -42,7 +53,7 @@ export default function useVoiceStream({ onSilenceDetected } = {}) {
     }
 
     try {
-      if (processorRef.current) {
+      if (!existingStreamRef.current && processorRef.current) {
         processorRef.current.disconnect();
         processorRef.current = null;
       }
@@ -51,11 +62,13 @@ export default function useVoiceStream({ onSilenceDetected } = {}) {
     }
 
     try {
-      streamRef.current?.getTracks().forEach((t) => t.stop());
+      if (!existingStreamRef.current) {
+        streamRef.current?.getTracks().forEach((t) => t.stop());
+      }
     } catch (e) {}
 
     try {
-      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      if (!existingStreamRef.current && audioContextRef.current && audioContextRef.current.state !== 'closed') {
         audioContextRef.current.close();
       }
     } catch (e) {}
@@ -65,8 +78,10 @@ export default function useVoiceStream({ onSilenceDetected } = {}) {
       wsRef.current = null;
     }
 
-    audioContextRef.current = null;
-    streamRef.current = null;
+    if (!existingStreamRef.current) {
+      audioContextRef.current = null;
+      streamRef.current = null;
+    }
     backendFinalTextRef.current = "";
     accumulatedBrowserTextRef.current = "";
   }, []);
@@ -108,8 +123,8 @@ export default function useVoiceStream({ onSilenceDetected } = {}) {
           
           if (combinedText) {
             browserHasProducedTextRef.current = true;
-            // Update UI instantly with browser's fast guess
-            setVoiceTranscript(combinedText);
+            // Removed: setVoiceTranscript(combinedText);
+            // We no longer update the UI with the inaccurate browser guess.
 
             // Reset the silence timer on any speech detection
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
@@ -186,8 +201,8 @@ export default function useVoiceStream({ onSilenceDetected } = {}) {
               }, SILENCE_TIMEOUT_MS);
             }
             
-            // If the browser API isn't producing text, fallback to backend's throttled updates
-            if (!browserHasProducedTextRef.current && !data.is_final) {
+            // Unconditionally use backend's high-fidelity intermediate text
+            if (!data.is_final) {
               setVoiceTranscript(text);
             }
             
@@ -214,14 +229,30 @@ export default function useVoiceStream({ onSilenceDetected } = {}) {
       ws.onclose = () => setIsListening(false);
 
       // --- 3. SETUP AUDIO CONTEXT (To send raw bytes to Backend) ---
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      let stream = existingStreamRef.current;
+      if (!stream) {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
       streamRef.current = stream;
 
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      const audioContext = new AudioCtx({ sampleRate: 16000 });
-      audioContextRef.current = audioContext;
+      // Ensure AudioContext exists and is running
+      if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        audioContextRef.current = new AudioCtx({ sampleRate: 16000 });
+      }
 
+      // ALWAYS recreate the ScriptProcessor to prevent Chrome from silently dropping the listener
+      if (processorRef.current) {
+        try { processorRef.current.disconnect(); } catch (e) {}
+      }
+      if (sourceRef.current) {
+        try { sourceRef.current.disconnect(); } catch (e) {}
+      }
+
+      const audioContext = audioContextRef.current;
       const source = audioContext.createMediaStreamSource(stream);
+      sourceRef.current = source;
+      
       const processor = audioContext.createScriptProcessor(4096, 1, 1);
       processorRef.current = processor;
       
@@ -229,6 +260,7 @@ export default function useVoiceStream({ onSilenceDetected } = {}) {
       processor.connect(audioContext.destination);
 
       processor.onaudioprocess = (e) => {
+        if (!isListeningRef.current) return;
         if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
         
         const inputData = e.inputBuffer.getChannelData(0);
@@ -266,7 +298,7 @@ export default function useVoiceStream({ onSilenceDetected } = {}) {
       console.error("[STT] Start failed:", err);
       stopListening();
     }
-  }, [isListening, stopListening]);
+  }, [isListening, stopListening, setIsListening]);
 
   useEffect(() => () => stopListening(), [stopListening]);
 

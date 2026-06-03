@@ -90,7 +90,7 @@ def send_candidate_completion_email(user, password):
             'name': user.email,
             'email': user.email,
             'password': password,
-            'login_url': f"{settings.CANDIDATE_FRONTEND_URL}/login",
+            'login_url': f"{settings.FRONTEND_URL}/",
             'temp_password': password  # just to log it in server console
         },
         recipient_list=[user.email]
