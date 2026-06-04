@@ -1,5 +1,5 @@
 {
-  "appId": "com.ai.interview.candidate",
-  "appName": "InterviewerAI",
+  "appId": "com.company.aiinterview",
+  "appName": "AI Interview Platform",
   "webDir": "dist"
 }

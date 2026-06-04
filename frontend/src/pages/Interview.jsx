@@ -6,8 +6,6 @@ import {
 } from 'lucide-react';
 import VoiceInit from '../components/VoiceInit';
 import useVoiceStream from '../hooks/useVoiceStream';
-import * as cocoSsd from '@tensorflow-models/coco-ssd';
-import '@tensorflow/tfjs';
 
 const ActiveInterview = () => {
   const navigate = useNavigate();
@@ -216,11 +214,17 @@ const ActiveInterview = () => {
   }, [isComplete, terminationMessage, navigate, tabSwitchCount]);
 
   useEffect(() => {
-    // Disabled object detection completely to prevent main thread freezing
+    // Disabled object detection completely to prevent main thread freezing.
+    // If you wish to re-enable this, it will load dynamically so it won't bloat the main bundle:
     // const timer = setTimeout(() => {
-    //   cocoSsd.load().then(loadedModel => {
-    //     setModel(loadedModel);
-    //   }).catch(err => console.error("Failed to load COCO-SSD model", err));
+    //   Promise.all([
+    //     import('@tensorflow/tfjs'),
+    //     import('@tensorflow-models/coco-ssd')
+    //   ]).then(([_, cocoSsd]) => {
+    //     cocoSsd.load().then(loadedModel => {
+    //       setModel(loadedModel);
+    //     }).catch(err => console.error("Failed to load COCO-SSD model", err));
+    //   }).catch(err => console.error("Failed to dynamically import TensorFlow", err));
     // }, 2000);
     // return () => clearTimeout(timer);
   }, []);

@@ -8,26 +8,38 @@ import { InterviewProvider } from './context/InterviewContext';
 // Styles
 import './index.css';
 
-// Candidate Pages & Components
-import SystemCheck from './pages/SystemCheck';
-import WaitingRoom from './pages/WaitingRoom';
-import Interview from './pages/Interview';
-import Submission from './pages/Submission';
-import Feedback from './pages/Feedback';
-import NotFound from './pages/NotFound';
-import SessionHandler from './components/SessionHandler';
+// Candidate Pages & Components (Lazy Loaded)
+const SystemCheck = React.lazy(() => import('./pages/SystemCheck'));
+const WaitingRoom = React.lazy(() => import('./pages/WaitingRoom'));
+const Interview = React.lazy(() => import('./pages/Interview'));
+const Submission = React.lazy(() => import('./pages/Submission'));
+const Feedback = React.lazy(() => import('./pages/Feedback'));
+const SessionHandler = React.lazy(() => import('./components/SessionHandler'));
 
-// Recruiter Pages & Components
+// Recruiter Pages & Components (Lazy Loaded)
+const Login = React.lazy(() => import('./pages/Login'));
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const Jobs = React.lazy(() => import('./pages/Jobs'));
+const Reports = React.lazy(() => import('./pages/Reports'));
+const ReportDetail = React.lazy(() => import('./pages/ReportDetail'));
+const Profile = React.lazy(() => import('./pages/Profile'));
+const LiveMonitoring = React.lazy(() => import('./pages/LiveMonitoring'));
+const Notifications = React.lazy(() => import('./pages/Notifications'));
+
+// Common Pages (Statically Loaded for instant 404 / layout shell loading)
+import NotFound from './pages/NotFound';
 import Layout from './components/layout/Layout';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Jobs from './pages/Jobs';
-import Reports from './pages/Reports';
 import RecruiterProtectedRoute from './components/auth/ProtectedRoute';
-import ReportDetail from './pages/ReportDetail';
-import Profile from './pages/Profile';
-import LiveMonitoring from './pages/LiveMonitoring';
-import Notifications from './pages/Notifications';
+
+// Loading fallback component during lazy chunk loading
+const LoadingFallback = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="flex flex-col items-center gap-3">
+      <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+      <p className="text-sm font-semibold text-gray-500">Loading page...</p>
+    </div>
+  </div>
+);
 
 // Candidate Context Wrapper to isolate candidate state
 const CandidateWrapper = () => {
@@ -43,51 +55,53 @@ const CandidateWrapper = () => {
 function App() {
   return (
     <Router>
-      <Routes>
-        {/* ========================================================= */}
-        {/* CANDIDATE FLOW (Wrapped in Candidate Auth/Interview Contexts) */}
-        {/* ========================================================= */}
-        <Route element={<CandidateWrapper />}>
-          {/* Session Initializer */}
-          <Route path="/interview/:token" element={<SessionHandler />} />
+      <React.Suspense fallback={<LoadingFallback />}>
+        <Routes>
+          {/* ========================================================= */}
+          {/* CANDIDATE FLOW (Wrapped in Candidate Auth/Interview Contexts) */}
+          {/* ========================================================= */}
+          <Route element={<CandidateWrapper />}>
+            {/* Session Initializer */}
+            <Route path="/interview/:token" element={<SessionHandler />} />
 
-          {/* Interview flow pages */}
-          <Route path="/system-check" element={<SystemCheck />} />
-          <Route path="/waiting-room" element={<WaitingRoom />} />
-          <Route path="/interview" element={<Interview />} />
-          <Route path="/submission" element={<Submission />} />
-          <Route path="/feedback" element={<Feedback />} />
-        </Route>
-
-        {/* ========================================================= */}
-        {/* RECRUITER FLOW (Default Root / dashboard pages) */}
-        {/* ========================================================= */}
-        {/* Recruiter Login */}
-        <Route path="/" element={<Login />} />
-
-        {/* Protected Recruiter Pages */}
-        <Route element={<RecruiterProtectedRoute />}>
-          {/* Full-screen protected routes */}
-          <Route path="/live-monitoring/:sessionId" element={<LiveMonitoring />} />
-          {/* Redirect /recruiter/interviews/:sessionId/track links to Live Monitoring */}
-          <Route path="/recruiter/interviews/:sessionId/track" element={<LiveMonitoring />} />
-
-          {/* Main dashboard layout routes */}
-          <Route element={<Layout />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/jobs" element={<Jobs />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/report/:id" element={<ReportDetail />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/notifications" element={<Notifications />} />
+            {/* Interview flow pages */}
+            <Route path="/system-check" element={<SystemCheck />} />
+            <Route path="/waiting-room" element={<WaitingRoom />} />
+            <Route path="/interview" element={<Interview />} />
+            <Route path="/submission" element={<Submission />} />
+            <Route path="/feedback" element={<Feedback />} />
           </Route>
-        </Route>
 
-        {/* ========================================================= */}
-        {/* GLOBAL 404 ROUTE */}
-        {/* ========================================================= */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+          {/* ========================================================= */}
+          {/* RECRUITER FLOW (Default Root / dashboard pages) */}
+          {/* ========================================================= */}
+          {/* Recruiter Login */}
+          <Route path="/" element={<Login />} />
+
+          {/* Protected Recruiter Pages */}
+          <Route element={<RecruiterProtectedRoute />}>
+            {/* Full-screen protected routes */}
+            <Route path="/live-monitoring/:sessionId" element={<LiveMonitoring />} />
+            {/* Redirect /recruiter/interviews/:sessionId/track links to Live Monitoring */}
+            <Route path="/recruiter/interviews/:sessionId/track" element={<LiveMonitoring />} />
+
+            {/* Main dashboard layout routes */}
+            <Route element={<Layout />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/jobs" element={<Jobs />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/report/:id" element={<ReportDetail />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/notifications" element={<Notifications />} />
+            </Route>
+          </Route>
+
+          {/* ========================================================= */}
+          {/* GLOBAL 404 ROUTE */}
+          {/* ========================================================= */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </React.Suspense>
     </Router>
   );
 }
