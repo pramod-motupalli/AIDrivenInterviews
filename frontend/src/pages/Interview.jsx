@@ -18,6 +18,7 @@ const ActiveInterview = () => {
     answers = {},
     isComplete = false,
     loading = false,
+    numQuestions = 5,
     submitAnswer,
     startInterview,
     finishInterview
@@ -293,7 +294,7 @@ const ActiveInterview = () => {
     */
   }, [model, isComplete, terminationMessage]);
 
-  const progress = questions.length ? Math.round(((currentIndex + 1) / questions.length) * 100) : 0;
+  const progress = numQuestions ? Math.round(((currentIndex + 1) / numQuestions) * 100) : 0;
 
   const formatTime = (s) => {
     const m = Math.floor(s / 60);
@@ -472,7 +473,7 @@ const ActiveInterview = () => {
 
           <div className="flex flex-col items-center">
             <div className="text-sm font-semibold text-slate-600 text-center">
-              QUESTION {currentIndex + 1} OF {Math.min(questions.length, 5)}
+              QUESTION {currentIndex + 1} OF {numQuestions}
             </div>
             <div className="w-64 sm:w-72 h-1.5 bg-slate-100 rounded-full mt-1 overflow-hidden">
               <div className="h-full bg-blue-600 rounded-full transition-all" style={{ width: `${progress}%` }} />

@@ -1,7 +1,7 @@
 import re
 import os
 
-views_path = r"c:\Users\Abhishek\AI_Interview_App\backend\interviews\views.py"
+views_path = r"c:\Users\vinay\OneDrive\Desktop\AI_Interview_App\backend\interviews\views.py"
 
 with open(views_path, 'r', encoding='utf-8') as f:
     content = f.read()

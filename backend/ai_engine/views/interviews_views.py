@@ -73,6 +73,7 @@ class InviteCandidateView(APIView):
         ats_score = request.data.get('ats_score')
         skills = request.data.get('skills', [])
         highlights = request.data.get('highlights', [])
+        question_count = int(request.data.get('questionCount', 5))
 
         interview = Interview.objects.create(
             job=job,
@@ -84,7 +85,8 @@ class InviteCandidateView(APIView):
             resume_text=resume_text,
             ats_score=ats_score,
             skills=skills,
-            highlights=highlights
+            highlights=highlights,
+            num_questions=question_count
         )
 
         # Store candidate name in the normalised CandidateProfile table
@@ -327,7 +329,8 @@ class StartInterviewView(APIView):
                 "answers": answers_dict,
                 "candidate_name": interview.candidate_name or interview.candidate.email,
                 "job_title": interview.job.title,
-                "status": interview.status
+                "status": interview.status,
+                "num_questions": interview.num_questions
             }, status=status.HTTP_200_OK)
 
         except Interview.DoesNotExist:
@@ -463,7 +466,7 @@ class SubmitAnswerView(APIView):
                 
                 # We only need a next question if we are not at the end of the interview
                 future_next_q = None
-                if next_index < 5:
+                if next_index < interview.num_questions:
                     future_next_q = executor.submit(
                         ai_service.generate_next_question, 
                         interview, 
@@ -502,7 +505,7 @@ class SubmitAnswerView(APIView):
             )
 
             # 3. Handle next question or completion
-            if next_index < 5:
+            if next_index < interview.num_questions:
                 # Update question bank
                 interview.question_bank.append({"text": next_q_text, "index": next_index})
                 interview.save()

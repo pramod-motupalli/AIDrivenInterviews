@@ -20,27 +20,23 @@ class SupabaseService:
         if not self.url or not self.key:
             raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in Django settings")
         
-        if SUPABASE_AVAILABLE and "dummy.supabase.co" not in self.url:
+        if SUPABASE_AVAILABLE:
             try:
                 self.client: Client = create_client(self.url, self.key)
             except Exception as e:
-                print(f"WARNING: Failed to initialize Supabase client ({str(e)}). Falling back to mock service.")
-                self.client = None
-                # Force fallback to mock by injecting dummy domain
-                self.url = "https://dummy.supabase.co"
+                # Raise the error immediately instead of falling back to dummy
+                raise ValueError(f"Failed to initialize Supabase client: {str(e)}\nPlease check your SUPABASE_KEY in the .env file. It should be a valid JWT (starts with eyJ...), not a database password.")
         else:
             self.client = None
-            if "dummy.supabase.co" not in self.url:
-                raise ValueError("Supabase package is missing and cannot connect to real Supabase instance.")
+            raise ValueError("Supabase package is missing. Please install it with: pip install supabase")
 
     def upload_file(self, file_obj, bucket_name: str, remote_path: str):
         """
         Uploads a file object to Supabase Storage.
         Returns the public URL of the uploaded file.
         """
-        if "dummy.supabase.co" in self.url or not self.client:
-            print("DEBUG: Bypassing Supabase upload (dummy/mock fallback mode active).")
-            return f"https://dummy.supabase.co/storage/v1/object/public/{bucket_name}/{remote_path}"
+        if not self.client:
+            raise ValueError("Supabase client is not initialized.")
 
         try:
             # Ensure the bucket exists or is handled
@@ -65,24 +61,23 @@ class SupabaseService:
             public_url = self.client.storage.from_(bucket_name).get_public_url(remote_path)
             return public_url
         except Exception as e:
-            print(f"WARNING: Supabase upload failed ({str(e)}). Falling back to mock URL.")
-            return f"https://dummy.supabase.co/storage/v1/object/public/{bucket_name}/{remote_path}"
+            print(f"ERROR: Supabase upload failed ({str(e)}).")
+            raise
 
     def save_screening_metadata(self, data: dict):
         """
         Saves screening metadata to the 'screenings' table.
         Expected keys: candidate_name, candidate_email, recruiter_id, jd_url, resume_url
         """
-        if "dummy.supabase.co" in self.url or not self.client:
-            print("DEBUG: Bypassing Supabase DB insert (dummy/mock fallback mode active).")
-            return {"id": "dummy-id", **data}
+        if not self.client:
+            raise ValueError("Supabase client is not initialized.")
 
         try:
             response = self.client.table("screenings").insert(data).execute()
             return response.data
         except Exception as e:
-            print(f"WARNING: Supabase DB insert failed ({str(e)}). Bypassing metadata save.")
-            return {"id": "dummy-id", **data}
+            print(f"ERROR: Supabase DB insert failed ({str(e)}).")
+            raise
 
     def upload_json_report(self, report_dict: dict, remote_path: str, bucket_name: str = "screening-documents"):
         """
@@ -90,9 +85,8 @@ class SupabaseService:
         Returns the public URL of the uploaded file.
         """
         import json, io
-        if "dummy.supabase.co" in self.url or not self.client:
-            print("DEBUG: Bypassing Supabase report upload (dummy/mock fallback mode active).")
-            return f"https://dummy.supabase.co/storage/v1/object/public/{bucket_name}/{remote_path}"
+        if not self.client:
+            raise ValueError("Supabase client is not initialized.")
 
         try:
             json_bytes = json.dumps(report_dict, indent=2, ensure_ascii=False).encode("utf-8")
@@ -109,16 +103,15 @@ class SupabaseService:
             public_url = self.client.storage.from_(bucket_name).get_public_url(remote_path)
             return public_url
         except Exception as e:
-            print(f"WARNING: Supabase report upload failed ({str(e)}). Falling back to mock URL.")
-            return f"https://dummy.supabase.co/storage/v1/object/public/{bucket_name}/{remote_path}"
+            print(f"ERROR: Supabase report upload failed ({str(e)}).")
+            raise
 
     def update_screening_with_report(self, candidate_email: str, report_url: str):
         """
         Updates the screenings table row matching candidate_email with the report_url.
         """
-        if "dummy.supabase.co" in self.url or not self.client:
-            print("DEBUG: Bypassing Supabase DB update (dummy/mock fallback mode active).")
-            return
+        if not self.client:
+            raise ValueError("Supabase client is not initialized.")
 
         try:
             self.client.table("screenings") \
@@ -126,7 +119,8 @@ class SupabaseService:
                 .eq("candidate_email", candidate_email) \
                 .execute()
         except Exception as e:
-            print(f"WARNING: Supabase DB update failed ({str(e)}). Bypassing update.")
+            print(f"ERROR: Supabase DB update failed ({str(e)}).")
+            raise
 
 supabase_service = SupabaseService()
 # Trigger auto-reload

@@ -121,12 +121,15 @@ Return ONLY a valid JSON object with this structure:
         """
         Evaluates a candidate's answer and returns scoring dimensions.
         """
+        safe_question = question_text[:2000] if question_text else ""
+        safe_answer = answer_text[:6000] if answer_text else ""
+
         prompt = f"""
 You are a Senior Talent Acquisition Lead conducting a rigorous technical interview.
 Evaluate the candidate's answer to the following technical question.
 
-Question: {question_text}
-Candidate's Answer: {answer_text}
+Question: {safe_question}
+Candidate's Answer: {safe_answer}
 
 Score the answer from 0 to 100 on three dimensions:
 1. Relevance  – does it directly address the technical core of the question?
@@ -174,7 +177,11 @@ Return ONLY a JSON object with this exact structure:
             history_items.append(f"Candidate: {r.answer_text}")
         
         history_str = "\n".join(history_items)
-        if not history_str:
+        # Keep only the last ~6000 characters of history to avoid context window limits
+        if len(history_str) > 6000:
+            history_str = "...(earlier context omitted)...\n" + history_str[-6000:]
+
+        if not history_str or history_str.strip() == "...(earlier context omitted)...\n":
             history_str = "(No conversation history yet. This is the start of the interview.)"
 
         # List of questions already generated to prevent duplication

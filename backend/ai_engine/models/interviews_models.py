@@ -34,6 +34,7 @@ class Interview(models.Model):
     question_bank = models.JSONField(default=list, blank=True)
     skills       = models.JSONField(default=list, blank=True)
     highlights   = models.JSONField(default=list, blank=True)
+    num_questions = models.IntegerField(default=5)
     created_at   = models.DateTimeField(auto_now_add=True)
 
     @property

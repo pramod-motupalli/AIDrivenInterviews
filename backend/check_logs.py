@@ -2,7 +2,7 @@ import os
 import django
 import sys
 
-sys.path.append('c:/Users/Abhishek/AI_Interview_App/backend')
+sys.path.append('c:/Users/vinay/OneDrive/Desktop/AI_Interview_App/backend')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings.base')
 django.setup()
 

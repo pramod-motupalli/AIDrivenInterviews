@@ -61,7 +61,7 @@ export function EmptyCard({ icon, title, description, onFileSelect, disabled }) 
 // ==========================================
 // 1.5 SELECTED (READY TO SCREEN) STATE CARD
 // ==========================================
-export function SelectedCard({ file, type, onRemove, onReplace, disabled }) {
+export function SelectedCard({ file, type, onRemove, onReplace, onPreview, disabled }) {
   const fileInputRef = useRef(null);
 
   const handleReplaceClick = (e) => {
@@ -102,7 +102,18 @@ export function SelectedCard({ file, type, onRemove, onReplace, disabled }) {
         Ready to Screen
       </p>
       
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
+        {onPreview && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={(e) => { e.stopPropagation(); onPreview(); }}
+            disabled={disabled}
+            className="border-slate-200 text-blue-600 hover:bg-blue-50 font-bold h-8 sm:h-9 px-3 sm:px-4 rounded-xl cursor-pointer text-xs"
+          >
+            Preview
+          </Button>
+        )}
         <Button 
           variant="outline" 
           size="sm" 

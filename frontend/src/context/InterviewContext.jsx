@@ -10,6 +10,7 @@ export const InterviewProvider = ({ children }) => {
   const [answers, setAnswers] = useState({});
   const [isComplete, setIsComplete] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [numQuestions, setNumQuestions] = useState(5);
 
   const startInterview = async () => {
     if (loading) return;
@@ -29,6 +30,9 @@ export const InterviewProvider = ({ children }) => {
       
       const loadedQuestions = data.questions || [];
       setQuestions(loadedQuestions);
+      if (data.num_questions) {
+        setNumQuestions(data.num_questions);
+      }
       
       // If the interview is already completed, mark it
       if (data.status === 'completed') {
@@ -62,9 +66,9 @@ export const InterviewProvider = ({ children }) => {
 
       if (!token) {
         // Mock mode progression:
-        // Move to next mock question or finish after 5 questions
+        // Move to next mock question or finish after numQuestions
         const nextIndex = currentIndex + 1;
-        if (nextIndex >= Math.min(questions.length, 5)) {
+        if (nextIndex >= Math.min(questions.length, numQuestions)) {
           setIsComplete(true);
         } else {
           setCurrentIndex(nextIndex);
@@ -101,7 +105,7 @@ export const InterviewProvider = ({ children }) => {
       console.error("Failed to submit answer:", error);
       // Fallback in case of API error, allow user to move forward locally
       const nextIndex = currentIndex + 1;
-      if (nextIndex >= Math.min(questions.length, 5)) {
+      if (nextIndex >= Math.min(questions.length, numQuestions)) {
         setIsComplete(true);
       } else {
         setCurrentIndex(nextIndex);
@@ -122,6 +126,7 @@ export const InterviewProvider = ({ children }) => {
     answers,
     isComplete,
     loading,
+    numQuestions,
     startInterview,
     submitAnswer,
     nextQuestion

@@ -433,6 +433,13 @@ export default function Jobs() {
                   setJdFile(file);
                   setAnalysisResult(null);
                 }}
+                onPreview={() => {
+                  setPreviewFile({
+                    name: jdFile.name,
+                    type: 'jd',
+                    url: URL.createObjectURL(jdFile)
+                  });
+                }}
                 disabled={loading}
               />
             ) : (
@@ -459,6 +466,13 @@ export default function Jobs() {
                 onReplace={(file) => {
                   setResumeFile(file);
                   setAnalysisResult(null);
+                }}
+                onPreview={() => {
+                  setPreviewFile({
+                    name: resumeFile.name,
+                    type: 'resume',
+                    url: URL.createObjectURL(resumeFile)
+                  });
                 }}
                 disabled={loading}
               />

@@ -40,7 +40,12 @@ export default function CandidateDeepView({
     if (!url) return null;
     if (url.startsWith('blob:')) return `${url}#toolbar=0`;
     
-    // Force Google Docs viewer for all Supabase URLs to prevent auto-downloads in the iframe.
+    // If it's a PDF, allow the browser to render it natively
+    if (url.toLowerCase().includes('.pdf')) {
+      return `${url}#toolbar=0`;
+    }
+    
+    // Force Google Docs viewer for DOCX or other formats to prevent auto-downloads in the iframe.
     return `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
   };
 

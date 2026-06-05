@@ -59,7 +59,7 @@ class STTConsumer(AsyncWebsocketConsumer):
             
             # Trigger incremental transcription
             now = time.time()
-            if not self.is_transcribing and (now - self.last_transcribe_time > 2.5) and len(self.audio_buffer) > 16000:
+            if not self.is_transcribing and (now - self.last_transcribe_time > 4.0) and len(self.audio_buffer) > 16000:
                 self.is_transcribing = True
                 self.last_transcribe_time = now
                 asyncio.create_task(self._process_incremental())
@@ -69,7 +69,11 @@ class STTConsumer(AsyncWebsocketConsumer):
             data = json.loads(text_data)
             if data.get("type") == "finalize":
                 transcript = await self._transcribe()
-                final_text = (transcript or self.current_transcript).strip()
+                if transcript is not None:
+                    final_text = transcript.strip()
+                else:
+                    final_text = self.current_transcript.strip()
+                    
                 # Clear buffer for next answer
                 self.audio_buffer = np.array([], dtype=np.float32)
                 self.current_transcript = ""
@@ -82,7 +86,7 @@ class STTConsumer(AsyncWebsocketConsumer):
     async def _process_incremental(self):
         try:
             transcript = await self._transcribe()
-            if transcript:
+            if transcript is not None:
                 self.current_transcript = transcript
                 await self.send(json.dumps({
                     "type": "transcript",
@@ -164,7 +168,7 @@ class STTConsumer(AsyncWebsocketConsumer):
             return text
         except Exception as e:
             print(f"[STT] Groq Transcription error: {e}")
-            return ""
+            return None
 
     @sync_to_async
     def _get_user_from_query(self):
