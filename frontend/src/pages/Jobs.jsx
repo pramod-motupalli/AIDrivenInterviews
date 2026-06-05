@@ -32,6 +32,14 @@ export default function Jobs() {
   const [candidateToDelete, setCandidateToDelete] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
+  // Interview configuration state
+  const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
+  const [candidateToConfigure, setCandidateToConfigure] = useState(null);
+  const [dialogOption, setDialogOption] = useState('5'); // '5', '10', '15', '20', 'custom'
+  const [dialogCustomValue, setDialogCustomValue] = useState('5');
+  const [customError, setCustomError] = useState("");
+  const [questionCountState, setQuestionCountState] = useState({ questionCount: 5 });
+
   // Pipeline Tabs and Pagination states
   const [pipelineSubTab, setPipelineSubTab] = useState('all'); // 'all', 'awaiting_invite', 'scheduled_live', 'completed', 'hired', 'rejected'
   const [visibleCount, setVisibleCount] = useState(6);
@@ -230,7 +238,16 @@ export default function Jobs() {
     }
   };
 
-  const handleScheduleInterview = async (candidate) => {
+  const handleScheduleInterview = (candidate) => {
+    if (!candidate) return;
+    setDialogOption('5');
+    setDialogCustomValue('5');
+    setCustomError('');
+    setCandidateToConfigure(candidate);
+    setIsConfigDialogOpen(true);
+  };
+
+  const executeScheduleInterview = async (candidate, questionCount) => {
     if (!candidate) return;
     setSchedulingCandidateId(candidate.id);
     setMessage({ type: 'info', text: `Sending interview invite to ${candidate.name}...` });
@@ -262,7 +279,11 @@ export default function Jobs() {
           interview_type: defaultConfig.interview_type,
           difficulty: defaultConfig.difficulty,
           duration: defaultConfig.duration,
-          config: defaultConfig
+          config: {
+            ...defaultConfig,
+            question_count: questionCount
+          },
+          questionCount: questionCount
         }),
       });
 
@@ -293,6 +314,23 @@ export default function Jobs() {
     } finally {
       setSchedulingCandidateId(null);
     }
+  };
+
+  const validateCustomCount = (val) => {
+    if (!val || String(val).trim() === '') {
+      return "Please enter a number of questions";
+    }
+    const num = Number(val);
+    if (!Number.isInteger(num)) {
+      return "Number of questions must be an integer";
+    }
+    if (num < 1) {
+      return "Minimum number of questions is 1";
+    }
+    if (num > 50) {
+      return "Maximum number of questions is 50";
+    }
+    return null;
   };
 
   const handleConfirmDelete = (cand) => {
@@ -851,6 +889,132 @@ export default function Jobs() {
                 Delete Candidate
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* INTERVIEW CONFIGURATION DIALOG */}
+      {isConfigDialogOpen && candidateToConfigure && (
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white border border-gray-100 rounded-t-2xl sm:rounded-2xl p-6 w-full sm:max-w-md shadow-2xl animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[22px]">settings_suggest</span>
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-gray-950">Configure Interview</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">For {candidateToConfigure.name}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  setIsConfigDialogOpen(false);
+                  setCandidateToConfigure(null);
+                }}
+                className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="space-y-4 my-6">
+              <div>
+                <label htmlFor="question-count-select" className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                  Number of Questions
+                </label>
+                <div className="relative">
+                  <select
+                    id="question-count-select"
+                    value={dialogOption}
+                    onChange={(e) => {
+                      setDialogOption(e.target.value);
+                      setCustomError("");
+                    }}
+                    className="w-full bg-gray-50 border border-gray-200 text-gray-800 rounded-xl px-3.5 py-3 text-sm font-semibold focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer"
+                  >
+                    <option value="5">5 Questions (Default)</option>
+                    <option value="10">10 Questions</option>
+                    <option value="15">15 Questions</option>
+                    <option value="20">20 Questions</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                    <span className="material-symbols-outlined text-[18px]">keyboard_arrow_down</span>
+                  </div>
+                </div>
+              </div>
+
+              {dialogOption === 'custom' && (
+                <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+                  <label htmlFor="custom-question-input" className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                    Enter Number of Questions
+                  </label>
+                  <input
+                    id="custom-question-input"
+                    type="number"
+                    value={dialogCustomValue}
+                    onChange={(e) => {
+                      setDialogCustomValue(e.target.value);
+                      setCustomError("");
+                    }}
+                    min="1"
+                    max="50"
+                    placeholder="e.g. 12"
+                    className={`w-full bg-gray-50 border ${customError ? 'border-red-500 focus:ring-red-500/20 focus:border-red-500' : 'border-gray-200 focus:ring-blue-500/20 focus:border-blue-500'} text-gray-800 rounded-xl px-3.5 py-2.5 text-sm font-semibold outline-none transition-all`}
+                  />
+                  {customError && (
+                    <p className="text-xs text-red-500 font-semibold mt-1.5 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">error</span>
+                      {customError}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+              <button
+                onClick={() => {
+                  setIsConfigDialogOpen(false);
+                  setCandidateToConfigure(null);
+                }}
+                className="px-5 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-xs sm:text-sm font-bold hover:bg-gray-50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  let finalCount = 5;
+                  if (dialogOption === 'custom') {
+                    const error = validateCustomCount(dialogCustomValue);
+                    if (error) {
+                      setCustomError(error);
+                      return;
+                    }
+                    finalCount = parseInt(dialogCustomValue, 10);
+                  } else {
+                    finalCount = parseInt(dialogOption, 10);
+                  }
+                  
+                  // Store in state
+                  setQuestionCountState({ questionCount: finalCount });
+                  
+                  // Trigger schedule
+                  const cand = candidateToConfigure;
+                  setIsConfigDialogOpen(false);
+                  setCandidateToConfigure(null);
+                  executeScheduleInterview(cand, finalCount);
+                }}
+                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-lg shadow-blue-100 transition-colors cursor-pointer"
+              >
+                Send Interview Invite
+              </button>
+            </div>
+
           </div>
         </div>
       )}
