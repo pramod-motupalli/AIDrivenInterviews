@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 
-const SILENCE_TIMEOUT_MS = 2500;
+const SILENCE_TIMEOUT_MS = 5000;
 
 export default function useVoiceStream({ onSilenceDetected, existingStream } = {}) {
   const [isListening, setReactIsListening] = useState(false);
