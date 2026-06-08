@@ -97,3 +97,16 @@ class CandidateReview(models.Model):
 
     def __str__(self):
         return f"Review by {self.interview.candidate.email}"
+
+class Screening(models.Model):
+    candidate_name = models.CharField(max_length=255, blank=True, null=True)
+    candidate_email = models.EmailField()
+    recruiter_id = models.CharField(max_length=255, blank=True, null=True)
+    jd_url = models.URLField(max_length=1000, blank=True, null=True)
+    resume_url = models.URLField(max_length=1000, blank=True, null=True)
+    report_url = models.URLField(max_length=1000, blank=True, null=True)
+    status = models.CharField(max_length=50, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.candidate_email

@@ -55,7 +55,7 @@ export const InterviewProvider = ({ children }) => {
     }
   };
 
-  const submitAnswer = async (questionId, transcript) => {
+  const submitAnswer = async (questionId, transcript, forceFinish = false) => {
     setLoading(true);
     try {
       const token = localStorage.getItem('interview_session_token');
@@ -84,10 +84,11 @@ export const InterviewProvider = ({ children }) => {
         currentQ.text, 
         transcript, 
         currentIndex,
-        token
+        token,
+        forceFinish
       );
 
-      if (data.is_complete) {
+      if (data.is_complete || forceFinish) {
         // Store interview_id for results page (backend returns it on completion)
         if (data.interview_id) {
           localStorage.setItem('interview_id', data.interview_id);

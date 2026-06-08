@@ -7,14 +7,15 @@ export const interviewService = {
     return response.data;
   },
 
-  async submitAnswer(interviewId, questionText, answerText, questionIndex, token) {
+  async submitAnswer(interviewId, questionText, answerText, questionIndex, token, forceFinish = false) {
     // Sends the candidate's answer and receives the next dynamically generated question
     const response = await api.post('/v1/interviews/submit-answer/', {
       interview_id: interviewId,
       question_text: questionText,
       answer_text: answerText,
       question_index: questionIndex,
-      token: token
+      token: token,
+      force_finish: forceFinish
     });
     return response.data;
   },

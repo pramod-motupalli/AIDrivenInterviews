@@ -25,6 +25,8 @@ const ActiveInterview = () => {
   } = context || {};
 
   const [transcript, setTranscript] = useState('');
+  const [pendingAnswer, setPendingAnswer] = useState(null);
+  const [accumulatedAnswer, setAccumulatedAnswer] = useState('');
   const [isPinned, setIsPinned] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -355,9 +357,23 @@ const ActiveInterview = () => {
   const handleSilenceSubmit = (text) => {
     const cleanText = (text || transcript || '').trim();
     if (!cleanText || loading) return;
-    submitAnswer(currentIndex, cleanText);
-    setTranscript('');
+    setPendingAnswer(cleanText);
     stopListening();
+  };
+
+  const submitFinalAnswer = () => {
+    const finalAnswer = (accumulatedAnswer + " " + pendingAnswer).trim();
+    submitAnswer(currentIndex, finalAnswer);
+    setTranscript('');
+    setPendingAnswer(null);
+    setAccumulatedAnswer('');
+  };
+
+  const continueAnswering = () => {
+    setAccumulatedAnswer((accumulatedAnswer + " " + pendingAnswer).trim() + " ");
+    setPendingAnswer(null);
+    setTranscript('');
+    startListening();
   };
 
   // Keep ref pointing to latest handleSilenceSubmit (captures fresh loading/transcript state)
@@ -380,7 +396,20 @@ const ActiveInterview = () => {
     window.speechSynthesis?.speak(utterance);
   }, [currentQuestion?.text]); // eslint-disable-line
 
-  const handleFinish = () => finishInterview?.();
+  const handleFinish = () => {
+    // Treat the current text as the final answer and force completion
+    const finalAnswer = (accumulatedAnswer + " " + (pendingAnswer || transcript)).trim();
+    if (finalAnswer) {
+      submitAnswer(currentIndex, finalAnswer, true);
+    } else {
+      // If there's literally no answer, just finish via an empty submission
+      submitAnswer(currentIndex, "", true);
+    }
+    setTranscript('');
+    setPendingAnswer(null);
+    setAccumulatedAnswer('');
+  };
+
   if (terminationMessage) {
     return (
       <div className="min-h-screen bg-red-50 flex flex-col items-center justify-center p-6 text-center">
@@ -573,7 +602,7 @@ const ActiveInterview = () => {
                 <textarea
                   className="w-full h-full resize-none outline-none text-[16px] sm:text-[17px] leading-relaxed placeholder-slate-400"
                   placeholder="Listen carefully and respond to the interviewer..."
-                  value={transcript}
+                  value={(accumulatedAnswer + (pendingAnswer || transcript)).trim()}
                   readOnly={true}
                 />
               </div>
@@ -588,20 +617,29 @@ const ActiveInterview = () => {
         </div>
       </div>
 
-      {/* Mic Button */}
-      <div className="fixed bottom-20 sm:bottom-24 left-1/2 -translate-x-1/2 z-50">
-        <button
-          onClick={toggleMic}
-          disabled={loading}
-          className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 border-4 
-            ${isListening ? 'bg-blue-50 border-blue-500 scale-110 shadow-blue-500/40' : 'bg-white border-slate-200 hover:border-blue-400'}`}
-        >
-          {isListening ?
-            <Mic size={38} className="text-blue-500 animate-pulse" /> :
-            <Mic size={38} className="text-slate-700" />
-          }
-        </button>
-      </div>
+      {/* Snackbar for submitting or continuing */}
+      {pendingAnswer && !loading && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] bg-slate-800 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 animate-in slide-in-from-bottom-8">
+          <div>
+            <p className="text-sm font-semibold mb-1">Silence detected.</p>
+            <p className="text-xs text-slate-300">Would you like to continue your answer or move to the next question?</p>
+          </div>
+          <div className="flex gap-2 ml-4">
+            <button 
+              onClick={continueAnswering}
+              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-sm font-semibold transition"
+            >
+              Continue
+            </button>
+            <button 
+              onClick={submitFinalAnswer}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold transition"
+            >
+              Next Question
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Bottom Bar - White line removed when mic is ON */}
       <div className="fixed bottom-0 left-0 right-0 backdrop-blur-md py-4 px-4 sm:px-6 flex justify-center items-center z-50"

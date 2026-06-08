@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 
-const SILENCE_TIMEOUT_MS = 5000;
+const SILENCE_TIMEOUT_MS = 1500;
 
 export default function useVoiceStream({ onSilenceDetected, existingStream } = {}) {
   const [isListening, setReactIsListening] = useState(false);
@@ -123,8 +123,8 @@ export default function useVoiceStream({ onSilenceDetected, existingStream } = {
           
           if (combinedText) {
             browserHasProducedTextRef.current = true;
-            // Removed: setVoiceTranscript(combinedText);
-            // We no longer update the UI with the inaccurate browser guess.
+            // Update the UI immediately with the browser's fast transcription to reduce perceived latency
+            setVoiceTranscript(combinedText);
 
             // Reset the silence timer on any speech detection
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);

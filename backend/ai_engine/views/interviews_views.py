@@ -139,33 +139,25 @@ class CandidateDeleteView(APIView):
         if not email:
             return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # 1. Delete from Supabase (including files in storage)
-        from core.supabase_client import SupabaseService
+        # 1. Delete from local Storage and Screening model
+        from ai_engine.models.interviews_models import Screening
+        from django.core.files.storage import default_storage
         try:
-            supabase = SupabaseService().client
-            if supabase:
-                # Fetch row to get file URLs
-                response = supabase.table('screenings').select('*').eq('candidate_email', email).execute()
-                if response.data:
-                    screening = response.data[0]
-                    def get_path(url):
-                        if not url: return None
-                        parts = url.split('/public/screening-documents/')
-                        return parts[1] if len(parts) > 1 else None
+            screenings = Screening.objects.filter(candidate_email=email)
+            for screening in screenings:
+                def get_path(url):
+                    if not url: return None
+                    parts = url.split(settings.MEDIA_URL) if hasattr(settings, 'MEDIA_URL') and settings.MEDIA_URL in url else url.split('/media/')
+                    return parts[1] if len(parts) > 1 else url
 
-                    paths_to_delete = []
-                    for key in ['resume_url', 'jd_url', 'report_url']:
-                        path = get_path(screening.get(key))
-                        if path:
-                            paths_to_delete.append(path)
-                    
-                    if paths_to_delete:
-                        supabase.storage.from_('screening-documents').remove(paths_to_delete)
+                for url in [screening.resume_url, screening.jd_url, screening.report_url]:
+                    path = get_path(url)
+                    if path and default_storage.exists(path):
+                        default_storage.delete(path)
                 
-                # Delete the DB row
-                supabase.table('screenings').delete().eq('candidate_email', email).execute()
+            screenings.delete()
         except Exception as e:
-            print(f"Error deleting from supabase: {e}")
+            print(f"Error deleting from local DB/Storage: {e}")
 
         # 2. Delete from Postgres User table (Cascades to Profiles, Interviews, Reports, etc.)
         from django.contrib.auth import get_user_model
@@ -442,6 +434,7 @@ class SubmitAnswerView(APIView):
         answer_text = request.data.get('answer_text')
         question_index = request.data.get('question_index', 0)
         token = request.data.get('token')
+        force_finish = request.data.get('force_finish', False)
 
         try:
             if token:
@@ -466,7 +459,7 @@ class SubmitAnswerView(APIView):
                 
                 # We only need a next question if we are not at the end of the interview
                 future_next_q = None
-                if next_index < interview.num_questions:
+                if next_index < interview.num_questions and not force_finish:
                     future_next_q = executor.submit(
                         ai_service.generate_next_question, 
                         interview, 
@@ -474,9 +467,24 @@ class SubmitAnswerView(APIView):
                         previous_score=None # Pass None for now since evaluation is running in parallel
                     )
                 
-                evaluation = future_eval.result()
+                try:
+                    evaluation = future_eval.result(timeout=15)
+                except Exception as e:
+                    print(f"Error in evaluate_answer thread: {e}")
+                    evaluation = {
+                        "relevance_score": 50,
+                        "accuracy_score": 50,
+                        "clarity_score": 50,
+                        "overall_score": 50,
+                        "feedback": "Could not evaluate due to a timeout or error."
+                    }
+
                 if future_next_q:
-                    next_q_text = future_next_q.result()
+                    try:
+                        next_q_text = future_next_q.result(timeout=15)
+                    except Exception as e:
+                        print(f"Error in generate_next_question thread: {e}")
+                        next_q_text = "Can you elaborate on your experience related to the job description?"
             
             # 2. Save Response
             InterviewResponse.objects.create(
@@ -505,7 +513,7 @@ class SubmitAnswerView(APIView):
             )
 
             # 3. Handle next question or completion
-            if next_index < interview.num_questions:
+            if next_index < interview.num_questions and not force_finish:
                 # Update question bank
                 interview.question_bank.append({"text": next_q_text, "index": next_index})
                 interview.save()
@@ -539,8 +547,10 @@ class SubmitAnswerView(APIView):
                     }
                 )
 
-                # Generate Final Report
-                generate_interview_report(interview)
+                # Generate Final Report asynchronously after transaction commits
+                import threading
+                from django.db import transaction
+                transaction.on_commit(lambda: threading.Thread(target=generate_interview_report, args=[interview]).start())
 
                 # Create In-App Notification: Interview Completed
                 try:
@@ -570,6 +580,9 @@ class SubmitAnswerView(APIView):
 
         except Interview.DoesNotExist:
             return Response({"error": "Interview not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            print(f"SubmitAnswerView general error: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class GetResultsView(APIView):

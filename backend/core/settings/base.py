@@ -70,14 +70,12 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 ASGI_APPLICATION = 'core.asgi.application'
 
-DATABASE_URL = config('DATABASE_URL', default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
 DATABASES = {
-    'default': dj_database_url.parse(DATABASE_URL)
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 }
-
-# Ensure cockroachdb uses the correct engine
-if DATABASE_URL.startswith('cockroach://'):
-    DATABASES['default']['ENGINE'] = 'django_cockroachdb'
 
 AUTH_PASSWORD_VALIDATORS = [
     {

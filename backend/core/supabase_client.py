@@ -1,126 +1,54 @@
-import os
-from django.conf import settings
-import uuid
-
-try:
-    from supabase import create_client, Client
-    SUPABASE_AVAILABLE = True
-except ImportError:
-    SUPABASE_AVAILABLE = False
-    print("WARNING: Supabase package not found. Using mock for local development.")
-    def create_client(url, key):
-        return None
-    class Client:
-        pass
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+import json
 
 class SupabaseService:
+    """
+    Mocked Supabase Service that actually uses Django's native
+    default_storage (FileSystemStorage) and the native SQLite DB.
+    """
     def __init__(self):
-        self.url = getattr(settings, "SUPABASE_URL", None)
-        self.key = getattr(settings, "SUPABASE_KEY", None)
-        if not self.url or not self.key:
-            raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in Django settings")
-        
-        if SUPABASE_AVAILABLE:
-            try:
-                self.client: Client = create_client(self.url, self.key)
-            except Exception as e:
-                # Raise the error immediately instead of falling back to dummy
-                raise ValueError(f"Failed to initialize Supabase client: {str(e)}\nPlease check your SUPABASE_KEY in the .env file. It should be a valid JWT (starts with eyJ...), not a database password.")
-        else:
-            self.client = None
-            raise ValueError("Supabase package is missing. Please install it with: pip install supabase")
+        self.client = None
 
     def upload_file(self, file_obj, bucket_name: str, remote_path: str):
         """
-        Uploads a file object to Supabase Storage.
+        Uploads a file object to local Django storage.
         Returns the public URL of the uploaded file.
         """
-        if not self.client:
-            raise ValueError("Supabase client is not initialized.")
-
-        try:
-            # Ensure the bucket exists or is handled
-            # Reset file pointer to start
-            file_obj.seek(0)
-            
-            file_content = file_obj.read()
-            
-            # Get content type if available (Django UploadedFile has it)
-            content_type = getattr(file_obj, 'content_type', 'application/octet-stream')
-            
-            response = self.client.storage.from_(bucket_name).upload(
-                path=remote_path,
-                file=file_content,
-                file_options={
-                    "upsert": "true",
-                    "content-type": content_type
-                }
-            )
-            
-            # Get public URL
-            public_url = self.client.storage.from_(bucket_name).get_public_url(remote_path)
-            return public_url
-        except Exception as e:
-            print(f"ERROR: Supabase upload failed ({str(e)}).")
-            raise
+        file_obj.seek(0)
+        saved_path = default_storage.save(remote_path, file_obj)
+        return default_storage.url(saved_path)
 
     def save_screening_metadata(self, data: dict):
         """
-        Saves screening metadata to the 'screenings' table.
+        Saves screening metadata to the native Django Screening model.
         Expected keys: candidate_name, candidate_email, recruiter_id, jd_url, resume_url
         """
-        if not self.client:
-            raise ValueError("Supabase client is not initialized.")
-
-        try:
-            response = self.client.table("screenings").insert(data).execute()
-            return response.data
-        except Exception as e:
-            print(f"ERROR: Supabase DB insert failed ({str(e)}).")
-            raise
+        from ai_engine.models.interviews_models import Screening
+        screening = Screening.objects.create(
+            candidate_name=data.get("candidate_name"),
+            candidate_email=data.get("candidate_email"),
+            recruiter_id=data.get("recruiter_id"),
+            jd_url=data.get("jd_url"),
+            resume_url=data.get("resume_url"),
+            status=data.get("status", "pending")
+        )
+        return {"id": screening.id}
 
     def upload_json_report(self, report_dict: dict, remote_path: str, bucket_name: str = "screening-documents"):
         """
-        Uploads a JSON report as a .json file to Supabase Storage.
+        Uploads a JSON report as a .json file to local Django storage.
         Returns the public URL of the uploaded file.
         """
-        import json, io
-        if not self.client:
-            raise ValueError("Supabase client is not initialized.")
-
-        try:
-            json_bytes = json.dumps(report_dict, indent=2, ensure_ascii=False).encode("utf-8")
-            file_obj = io.BytesIO(json_bytes)
-
-            self.client.storage.from_(bucket_name).upload(
-                path=remote_path,
-                file=file_obj.read(),
-                file_options={
-                    "upsert": "true",
-                    "content-type": "application/json"
-                }
-            )
-            public_url = self.client.storage.from_(bucket_name).get_public_url(remote_path)
-            return public_url
-        except Exception as e:
-            print(f"ERROR: Supabase report upload failed ({str(e)}).")
-            raise
+        json_bytes = json.dumps(report_dict, indent=2, ensure_ascii=False).encode("utf-8")
+        saved_path = default_storage.save(remote_path, ContentFile(json_bytes))
+        return default_storage.url(saved_path)
 
     def update_screening_with_report(self, candidate_email: str, report_url: str):
         """
-        Updates the screenings table row matching candidate_email with the report_url.
+        Updates the Screening model row matching candidate_email with the report_url.
         """
-        if not self.client:
-            raise ValueError("Supabase client is not initialized.")
-
-        try:
-            self.client.table("screenings") \
-                .update({"report_url": report_url}) \
-                .eq("candidate_email", candidate_email) \
-                .execute()
-        except Exception as e:
-            print(f"ERROR: Supabase DB update failed ({str(e)}).")
-            raise
+        from ai_engine.models.interviews_models import Screening
+        Screening.objects.filter(candidate_email=candidate_email).update(report_url=report_url)
 
 supabase_service = SupabaseService()
-# Trigger auto-reload
